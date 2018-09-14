@@ -1,0 +1,12 @@
+# *.class
+JewelApp/build/
+JewelApp/Logs/
+JewelApp/dist/
+JewelApp/dist/*
+JewelApp/dist/bundles/*
+ResearchForJewel/build/
+ResearchForJewel/build/
+Deployment/Installers/
+*~
+Thumbs.db
+desktop.ini

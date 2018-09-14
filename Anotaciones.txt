@@ -1,0 +1,21 @@
+https://books.google.com.ar/books?id=C43sj3cKlTQC&hl=es&source=gbs_book_similarbooks
+http://enos.itcollege.ee/~jpoial/algorithms/GT/Data%20Structures%20and%20Algorithms%20in%20Java%20Fourth%20Edition.pdf
+http://ricskopf.digitaltrip.hu/JavaSoftwareStructures3rdEdition.pdf
+
+OJO!! la interfaz Map tiene algunos metodos que tienen implementacion con default. Hay que preguntar a Valerio si 
+hay que rehacer esas tambien!!
+
+COSAS A TESTEAR
+- probar colisiones. Para ello el hashCode() de dos keys deben dar iguales o muy similares (cosa que "int index = key.hashCode() % keys.length" den el mismo resultado). 
+Al encontrar una colision debe ser capaz de encontrar la key u objeto correspondiente (y uno el que es igual o muy similar).
+- put y get deberian ser, en gran parte, lineales (o sea, que su velocidad no dependan de cuantos objetos hay en la hash table)
+
+
+TAREAS A REALIZAR
+=================
+- Direccionamiento abierto para el tratamiendo de las colisiones: si dos objetos son mapeados al mismo lugar de la tabla, debe explorarse en la misma tabla hacia abajo la existencia de otro lugar libre. Esta exploracion debe ser CUADRATICA (y no lineal)
+- Implementacion interfaz Map
+- Todos los metodos de Hashtable deben estar re-implementados
+- Uso de Generics
+- Test-unit todo
+

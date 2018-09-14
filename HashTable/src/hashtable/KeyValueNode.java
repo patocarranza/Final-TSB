@@ -2,8 +2,8 @@
 package hashtable;
 
 /**
- *
- * @author Patricio
+ * FINAL TSB 2018
+ * @author Patricio Ezequiel Carranza, UTN FRC, legajo 60900
  */
 class KeyValueNode<K,V> {
     
