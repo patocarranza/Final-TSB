@@ -9,6 +9,8 @@ COSAS A TESTEAR
 - probar colisiones. Para ello el hashCode() de dos keys deben dar iguales o muy similares (cosa que "int index = key.hashCode() % keys.length" den el mismo resultado). 
 Al encontrar una colision debe ser capaz de encontrar la key u objeto correspondiente (y uno el que es igual o muy similar).
 - put y get deberian ser, en gran parte, lineales (o sea, que su velocidad no dependan de cuantos objetos hay en la hash table)
+- Inicializar el hash con 10 lugares y meterle 20/30/40 objetos y verificar que siempre todos los objetos sean insertados (si en algun momento alguno de los
+objetos no es insertado, entonces debemos hacer el rehash antes de meter el nuevo objeto).
 
 
 TAREAS A REALIZAR
