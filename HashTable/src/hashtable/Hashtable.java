@@ -13,13 +13,14 @@ import java.util.Set;
  */
 public class Hashtable<K,V> extends Dictionary<K,V>
                             implements java.util.Map<K,V>, 
-                                       Serializable {
+                                       Serializable, 
+                                       Cloneable {
     
     private static final long serialVersionUID = 42L;
     
     private KeyValueNode<K,V>[] nodos;
-    private float porcentajeOcupacionMaximo;
-    private K[] ve;
+    private final float porcentajeOcupacionMaximo;
+    private int nodosInsertados;
      
     
     public Hashtable() {
@@ -49,6 +50,7 @@ public class Hashtable<K,V> extends Dictionary<K,V>
 //      que si el tamaño de la tabla es un número primo y el porcentaje de ocupación no es mayor
 //      al 50% de la tabla, entonces la exploración cuadrática garantiza que la clave será insertada.
 
+        this.nodosInsertados = 0;
         this.porcentajeOcupacionMaximo = loadFactor;
         initialCapacity = getSiguientePrimo(initialCapacity);
         nodos = new KeyValueNode[initialCapacity];
@@ -58,13 +60,7 @@ public class Hashtable<K,V> extends Dictionary<K,V>
     
     @Override
     public V get(Object key) {
-        //funcion de dispersion/transformacion
-//        int index = key.hashCode() % nodos.length;
-//        
-//        //Podria haber colision (el index es igual) cuando dos hashCode() son similares.
-//        //Usamos DIRECCIONAMIENTO ABIERTO.
-//        
-//        Para buscar un objeto, se obtiene su dirección madre con la función h(), y se entra en la tabla en esa dirección.
+//        Para buscar un objeto, se obtiene su dirección madre con la función de dispersion, y se entra en la tabla en esa dirección.
 //        Si el objeto en esa casilla no es el buscado, se explora hacia abajo hasta encontrarlo (búsqueda exitosa), 
 //        o hasta encontrar una casilla abierta (búsqueda infructuosa). Y de esta forma, la búsqueda puede plantearse así: 
 //        obtenga la dirección madre del objeto a buscar. Entre en esa casilla. Si no contiene al objeto, 
@@ -74,43 +70,42 @@ public class Hashtable<K,V> extends Dictionary<K,V>
 //        En general la técnica de resolución de colisiones por direccionamiento abierto permite encontrar
 //        un objeto en tiempo casi constante: puede verse que se requiere un acceso directo a la dirección madre, 
 //        y una corta exploración en el peor caso para hallar el objeto
-//        
-//              
-//        ojo que tenemos que preguntar por el status del node
-//        while( nodos[index] != null &&
-//               ! nodos[index].key.equals(key) ) {
-//            index++;
-//            
-//            //Para evitar ArrayIndexOutOfBoundsException
-//            if(index >= nodos.length)
-//                index -= nodos.length; no deberia ser index = 0??
-//            
-//            //Le dimos la vuelta entera al array y no encontramos coincidencia de key.
-//            //Segun java.util.Map debemos devolver null.
-//            if(index == key.hashCode() % nodos.length)
-//                return null;
-//        }
-//          
-//        TIRARA NPE SI NO HAY OBJETO INICIALIZADO EN ESE INDEX???
-//        return nodos[index].value;
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates. 
+//        1- Preguntar si key es null. Puesto que no se permite almacenar null key
+//           (por el contrato de java.util.Hashtable), devolvemos NPE
+//        2- Preguntar si key es de la misma clase que K. Si no lo son
+//           devolvemos ClassCastException (por el contrato de java.util.Map).
+//        3- Buscamos si la key esta mapeada mediante busqueda cuadratica
+//        4- Si encontramos mapeada la key hacemos return del value.
+//        5- Si no esta mapeada la key, devolvemos null (contrato de java.util.HashTable).
+
+//      1, 2)
+        checkValidKey(key);
+
+//      3)
+        int index = getKeyIndexConCuadratica((K)key, nodos);
+//      4)
+        if(index != -1)
+            return nodos[index].value;
+//      5)
+        else
+            return null;
     }
 
     @Override
     public V put(K key, V value) {
 //      Apunte
 //        Al principio, cada casilla está vacía o abierta (de allí el nombre de esta técnica). Si un objeto 
-//        O1 pide entrar en una casilla i y la misma está abierta, O1 se almacena en ella.
-//        A partir de este momento, la casilla i está cerrada.
+//        O1 pide entrar en una casilla i y la misma está ABIERTA, O1 se almacena en ella.
+//        A partir de este momento, la casilla i está CERRADA.
 //                 
-//        Si otro objeto O2 pide entrar en la tabla y colisiona en la casilla i, se prueba en la casilla i+1 (direccionamiento abierto).
-//        Si está abierta, O2 se almacena en ella. Pero si está cerrada, se sigue probando con i+2, i+3, i+4...
-//        (haciendo una exploración lineal) hasta llegar a una casilla abierta y en ella se almacena el nuevo objeto.
+//        Si otro objeto O2 pide entrar en la tabla y la casilla i esta CERRADA, se prueba en la casilla i+1 (direccionamiento abierto).
+//        Si i+1 está ABIERTA, O2 se almacena en ella. Pero si está CERRADA, se sigue probando con i+2, i+3, i+4...
+//        (haciendo una exploración lineal) hasta llegar a una casilla ABIERTA.
 //                
 //        Puede preverse que a medida que la tabla se llene, las exploraciones lineales serán cada vez más largas.
 //        Esto sugiere que la tabla debería empezar con un tamaño mayor al número de objetos esperados, y controlar 
 //        el porcentaje de ocupación. Si el mismo llega a cierto valor crítico (entre 50 y 70 por ciento en muchas 
-//        implementaciones), se debería redimensionar la tabla
+//        implementaciones), se debería redimensionar la tabla.
 
 //        Por otra parte, aún cuando el porcentaje de ocupación de la tabla sea adecuado, el direccionamiento abierto 
 //        tiende a presentar comportamientos no deseados conocidos como agrupamiento primario y agrupamiento secundario.
@@ -138,25 +133,86 @@ public class Hashtable<K,V> extends Dictionary<K,V>
 
 //      Algoritmo
 //      1- Preguntar si la key o el value son null. Si alguno de los dos es null, tirar NPE.
-//         Asi lo especifica java.util.Map.put() y el contrato propio de java.util.Hashtable.put().
-//      2- Preguntar si dicha key ya se encuentra mapeada a un valor en nodes. Esto debe llevarse a cabo
-//         usando containsKey(key).
-//      3- Si la key ya estaba mapeado a otro valor, el valor antiguo se debe almacenar en una variable
+//         Contrato de java.util.Hashtable.put().
+//      2- Preguntar si dicha key ya se encuentra mapeada a un valor en nodes. 
+//         Si la key ya estaba mapeado a otro valor, el valor antiguo se debe almacenar en una variable
 //         ya que esto es lo que pondremos en el return. La key se mapeara ahora con el nuevo valor.
-//         Ir directo a ultimo paso devolviendo el valor antiguo.
-//      4- Si el paso 3 dio que la key no se encontraba ya insertada. significa que estamos insertando una nueva key.
-//         Checkeamos si ((size() + 1) / nodos.length) >= porcentajeOcupacionMaximo. Si esto no se cumple se hace
+//         Ir directo a ultimo paso devolviendo el valor antiguo
+//      3- Si la key no se encontraba ya insertada. significa que estamos insertando una nueva key.
+//         Checkeamos si ((size() + 1) / nodos.length) >= porcentajeOcupacionMaximo. Si esto da true entonces se hace
 //         rehash().
-//      5- Se calcula index = key.hashCode() % nodes.length. Si nodes[index] esta ABIERTA o TUMBA, se inserta ahi.
+//      4- Se calcula index = key.hashCode() % nodes.length. Si nodes[index] esta ABIERTA o TUMBA, se inserta ahi.
 //         Ir directo al ultimo paso devolviendo null.
-//      6- Si nodes[index] esta CERRADA, entonces se debe hacer exploración cuadratica para
+//      5- Si nodes[index] esta CERRADA, entonces se debe hacer exploración cuadratica para
 //         encontrar un lugar donde guardar el nuevo par key/value. CUIDADO CON ArrayIndexOutOfBoundsException!!
-//      7- Return value antiguo si se cumplio todo en paso 3. Return null si se continuo con el paso 4, 5 y 6
+//      6- Return value antiguo si se cumplio todo en paso 3. Return null si se continuo con el paso 4, 5 y 6
 
+//      1)
         if(key == null || value == null)
             throw new NullPointerException("La key o el value es null.");
         
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+//      2)
+        int index = getKeyIndexConCuadratica((K)key, nodos);
+        if(index != -1) {
+            V valRet = nodos[index].value;
+//            nodos[index].key = key;
+            nodos[index].value = value;
+            return valRet;
+        }
+        
+//      3)
+        if(checkOcupacionMasUno())
+            rehash();
+            
+//      4, 5)
+        index = getIndexParaPutConCuadratica(key, nodos);
+        nodos[index].key = key;
+        nodos[index].value = value;
+        nodos[index].status = KeyValueNode.KeyValueFlags.CERRADO;
+        nodosInsertados++;
+        
+//      6)
+        return null;
+    }
+    
+    /**
+     * Checkea si el arreglo de nodos pasa a tener un porcentaje de ocupacion mayor
+     * a porcentajeOcupacionMaximo (definido en el constructor) en el caso de que
+     * se le agregue un nodo mas.
+     * @return true si el arreglo supera el porcentaje de ocupacion si se le agrega
+     * un nodo mas, sino falso.
+     */
+    private boolean checkOcupacionMasUno() {
+        if(((size() + 1) / nodos.length) >= porcentajeOcupacionMaximo)
+            return true;
+        return false;
+    }
+    
+    protected void rehash() {
+//        Un control importante que debe realizarse es el del porcentaje de carga de la tabla (si se usa direccionamiento abierto) 
+//        Se debería monitorear la carga de la tabla, y en caso de llegar al punto de intervención, aumentar el tamaño de la 
+//        tabla (por ejemplo, en un 50% o hasta el número primo siguiente a ese 50%).
+//        
+//        El proceso es simple pero debe hacerse con cuidado: se crea la nueva tabla, se toman todos los registros que estaban 
+//        en la anterior, y se redispersan en la nueva tabla: no se puede sólo copiar los registros de una a otra, pues los
+//        tamaños de ambas no coinciden y los valores calculados por h() no serán consistentes. Al terminar, la vieja tabla 
+//        se elimina, y la nueva debe tomar el nombre de la eliminada (o ser apuntada por la referencia que antes apuntaba a la vieja tabla).
+//      1- Crear un nuevo array, asignandole de tamaño getSiguientePrimo(nodos.length*2).
+//      2- Por cada nodo con status.CERRADA en el array original se debe calcular el index
+//         a ocupar en el nuevo array, y copiar la key y value al nuevo array.
+//      3- Reemplazar la referencia del array viejo por el nuevo array.
+
+//      1)
+        KeyValueNode<K,V>[] nuevoArray = new KeyValueNode[getSiguientePrimo(nodos.length*2)];
+//      2)
+        for(KeyValueNode<K,V> node : nodos) {
+            if(node.status == KeyValueNode.KeyValueFlags.CERRADO) {
+                int index = getIndexParaPutConCuadratica(node.key, nuevoArray);
+                nuevoArray[index] = node;
+            }
+        }
+//      3)
+        nodos = nuevoArray;
     }
 
     private boolean esPrimo(int num) {        
@@ -181,43 +237,65 @@ public class Hashtable<K,V> extends Dictionary<K,V>
                 return num;
         }
     }
-
+    
+    /**
+     * 
+     * @param key
+     * @return  
+    */
     @Override
     public V remove(Object key) {
 ////         En algún momento se querrá eliminar un objeto de la tabla.
 ////         En principio, usamos marcado lógico para eliminar el objeto. Para ello, se debe buscar el objeto con el procedimiento anterior 
-////         (exploracion cuadratica) y una vez hallado marcar la casilla como vacía o abierta. Pero eso invalidaría el procedimiento de búsqueda: 
-////         si este debe terminar al encontrar una casilla abierta, la búsqueda podría darse por infructuosa cuando quizás el 
+////         (exploracion cuadratica) y una vez hallado marcar la casilla como ABIERTA. Pero eso invalidaría el procedimiento de búsqueda: 
+////         si este debe terminar al encontrar una casilla ABIERTA, la búsqueda podría darse por infructuosa cuando quizás el 
 ////         objeto esté más abajo en la tabla. De modo que al borrar un objeto lo que se hace es dejar su casilla como TUMBA.
-         
-        
-        
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+//        1- Preguntar si key es null. Puesto que no se permite almacenar null key
+//           (por el contrato de java.util.Hashtable), devolvemos NPE
+//        2- Preguntar si key es de la misma clase que K. Si no lo son
+//           devolvemos ClassCastException (por el contrato de java.util.Map).
+//        3- Buscamos si la key esta mapeada mediante busqueda cuadratica
+//        4- Si encontramos mapeada la key, seteamos el nodo en TUMBA, nulizamos la key y value del nodo
+//           y hacemos return del value.
+//        5- Si no esta mapeada la key, devolvemos null (contrato de java.util.HashTable).
+
+//      1, 2)
+        checkValidKey(key);
+
+//      3)
+        int index = getKeyIndexConCuadratica((K)key, nodos);
+//      4)
+        if(index != -1) {
+            nodosInsertados--;
+            nodos[index].status = KeyValueNode.KeyValueFlags.TUMBA;
+            nodos[index].key = null;
+            V value = nodos[index].value;
+            nodos[index].value = null;
+            return value;
+        }
+//      5)
+        else
+            return null;
     }
     
     @Override
     public int size() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return nodosInsertados;
     }
 
     @Override
     public boolean isEmpty() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return nodosInsertados == 0;
     }
-
-    @Override
-    public boolean containsKey(Object keyParam) {
-//        1- Preguntar si keyParam es null. Puesto que no se permite almacenar null key
-//           (por el contrato de java.util.Hashtable), devolvemos NPE
-//        1.2- Preguntar si keyParam es de la misma clase que K. Si no lo son
-//             devolvemos ClassCastException (por el contrato de java.util.Map).
-//        2- Si keyParam no es null, calcular index = keyParam.hashCode() % nodes.length. Si nodes[index] esta ABIERTA entonces
-//           la key no esta presente y devolvemos false. 
-//        3- Si nodes[index] es CERRADA entonces hacemos 
-//           return nodes[index].key.equals(keyParam). 
-//        4- si nodes[index] es TUMBA, entonces hacemos exploracion cuadratica. La busqueda
-//           continua mientras el nodo obtenido sea TUMBA, y termina cuando encontramos
-//           CERRADA o ABIERTA.
+    
+    /**
+     * Metodo para checkear que las keys pasadas como Object sean validas.
+     * @param keyParam
+     * @throws NullPointerException si la key es null (no se permite segun contrato de java.util.HashTable)
+     * @throws ClassCastException  si la key no es casteable a generic K
+     */
+    private void checkValidKey(Object keyParam)
+            throws NullPointerException, ClassCastException {
         if(keyParam == null)
             throw new NullPointerException("La key pasada por parametro no puede ser null.");
         
@@ -226,24 +304,103 @@ public class Hashtable<K,V> extends Dictionary<K,V>
         } catch(ClassCastException ex) {
             throw ex;
         }
+    }
+
+    /**
+     * @param keyParam
+     * @return true si hay una key en la hashTable que cumpla con equals(). Falso en caso
+     * contrario.
+     * @throws NullPointerException si keyParam es null (por contrato de java.util.HashTable.containsKey()).
+     */
+    @Override
+    public boolean containsKey(Object keyParam) 
+            throws NullPointerException {
+//        1- Preguntar si keyParam es null. Puesto que no se permite almacenar null key
+//           (por el contrato de java.util.Hashtable), devolvemos NPE
+//        2- Preguntar si keyParam es de la misma clase que K. Si no lo son
+//           devolvemos ClassCastException (por el contrato de java.util.Map).
+//        3- Si keyParam no es null, calcular index = keyParam.hashCode() % nodes.length. Si nodes[index] esta ABIERTA entonces
+//           la key no esta presente y devolvemos false. 
+//        4- Si nodes[index] es CERRADA entonces hacemos preguntamos si nodes[index].key.equals(keyParam). 
+//           Si esto da false, entonces hacemos exploración cuadrática, repitiendo en cada caso el check de
+//           ABIERTA, CERRADA o TUMBRA de los pasos 2, 3 y 4.
+//        5- si nodes[index] es TUMBA, entonces hacemos exploracion cuadratica. La busqueda
+//           continua mientras el nodo obtenido sea TUMBA o (CERRADA && ! nodes[index].key.equals(keyParam)),
+//           y termina cuando encontramos (CERRADA && nodes[index].key.equals(keyParam)) o ABIERTA.
+
+//      1, 2)
+        checkValidKey(keyParam);
         
-        int index = keyParam.hashCode() % nodos.length;
-        int i = 1;
-        KeyValueNode<K,V> nodo = nodos[index];
-        while(nodo.status == KeyValueNode.KeyValueFlags.TUMBA) {
-            if((index + (i^2)) >= nodos.length)
-                index = 0;
-            
-            if(index != 0)
-            nodo = nodos[(index + (i^2))];
-            i++;
-        }
-        
-        
-        if(nodo.status == KeyValueNode.KeyValueFlags.ABIERTO)
+//      3, 4 y 5)
+        if(getKeyIndexConCuadratica((K)keyParam, nodos) == -1)
             return false;
-        //else if(nodo.status == KeyValueNode.KeyValueFlags.CERRADO) 
-            return nodos[index].key.equals(keyParam);
+        return true;
+    }
+    
+    private int getHashIndex(K keyParam, KeyValueNode[] array) {
+        int index = keyParam.hashCode() % array.length;
+        //hashCode() podria dar un valor negativo, dejando el resto en negativo
+        if(index < 0)
+            index += array.length;
+        return index;
+    }
+    
+    /**
+     * Devuelve el index en donde se encuentra ubicada dicha keyParam.
+     * @param keyParam
+     * @param array
+     * @return 
+     */
+    private int getKeyIndexConCuadratica(K keyParam, KeyValueNode[] array) {
+        int keyHashIndex = getHashIndex(keyParam, array);
+        for(int i = 0; ;i++) { 
+            int indexCuad = keyHashIndex + (i^2);
+            //indexCuad puede crecer mayor al arreglo de nodos. Debemos restarle
+            //para evitar ArrayIndexOutOfBoundsException.
+            while(indexCuad >= array.length)
+                indexCuad -= array.length;
+            KeyValueNode<K,V> nodo = array[indexCuad];
+            
+            //ABIERTO: termina la busqueda, no se encontro la key en el arreglo.
+            if(nodo.status == KeyValueNode.KeyValueFlags.ABIERTO) 
+                return -1;
+            else if(nodo.status == KeyValueNode.KeyValueFlags.TUMBA)
+                continue;
+            else if(nodo.status == KeyValueNode.KeyValueFlags.CERRADO) {
+                if(nodo.key.equals(keyParam))
+                    return indexCuad;
+                continue;
+            }
+        }
+    }    
+    
+    /**
+     * Devuelve un index en el cual es posible insertar un nodo.
+     * @param keyParam
+     * @param array
+     * @return 
+     */
+    private int getIndexParaPutConCuadratica(K keyParam, KeyValueNode[] array) {
+        int keyHashIndex = getHashIndex(keyParam, array);
+        for(int i = 0; ;i++) { 
+            int indexCuad = keyHashIndex + (i^2);
+            //indexCuad puede crecer mayor al arreglo de nodos. Debemos restarle
+            //para evitar ArrayIndexOutOfBoundsException.
+            while(indexCuad >= array.length)
+                indexCuad -= array.length;
+            KeyValueNode<K,V> nodo = array[indexCuad];
+            
+
+            if(nodo.status == KeyValueNode.KeyValueFlags.ABIERTO) 
+                return indexCuad;
+            else if(nodo.status == KeyValueNode.KeyValueFlags.TUMBA)
+                return indexCuad;
+            else if(nodo.status == KeyValueNode.KeyValueFlags.CERRADO) {
+                if(nodo.key.equals(keyParam))
+                    return indexCuad;
+                continue;
+            }
+        }
     }
 
     @Override
@@ -258,7 +415,9 @@ public class Hashtable<K,V> extends Dictionary<K,V>
 
     @Override
     public void clear() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        nodosInsertados = 0;
+        for(int i = 0; i < nodos.length; i++)
+            nodos[i] = new KeyValueNode<>();
     }
 
     @Override
@@ -276,12 +435,10 @@ public class Hashtable<K,V> extends Dictionary<K,V>
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
-
     @Override
     public Enumeration<K> keys() {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
-
 
     @Override
     public Enumeration<V> elements() {
