@@ -2,8 +2,6 @@ https://books.google.com.ar/books?id=C43sj3cKlTQC&hl=es&source=gbs_book_similarb
 http://enos.itcollege.ee/~jpoial/algorithms/GT/Data%20Structures%20and%20Algorithms%20in%20Java%20Fourth%20Edition.pdf
 http://ricskopf.digitaltrip.hu/JavaSoftwareStructures3rdEdition.pdf
 
-OJO!! la interfaz Map tiene algunos metodos que tienen implementacion con default. Hay que preguntar a Valerio si 
-hay que rehacer esas tambien!!
 
 COSAS A TESTEAR
 - probar colisiones. Para ello el hashCode() de dos keys deben dar iguales o muy similares (cosa que "int index = key.hashCode() % keys.length" den el mismo resultado). 
@@ -13,14 +11,13 @@ Al encontrar una colision debe ser capaz de encontrar la key u objeto correspond
 objetos no es insertado, entonces debemos hacer el rehash antes de meter el nuevo objeto).
 - hashcodes negativos
 - usar la HashTable sin usar generics (o sea new HashTable() en vez de new HashTable<>())
+- acordate del synchronized
+- Probar que ande con y sin generics
+- equals() y hashCode() de las dos implementaciones de hashtable y con los mismos objetos deberian dar iguales (o sea, true y el mismo hashcode)
 
 
-TAREAS A REALIZAR
-=================
-- Direccionamiento abierto para el tratamiendo de las colisiones: si dos objetos son mapeados al mismo lugar de la tabla, debe explorarse en la misma tabla hacia abajo la existencia de otro lugar libre. Esta exploracion debe ser CUADRATICA (y no lineal)
-- Implementacion interfaz Map
-- Todos los metodos de Hashtable deben estar re-implementados
-- Uso de Generics
-- Test-unit todo
 
-
+TRAJES
+======
+YvesSaintLaurent: https://articulo.mercadolibre.com.ar/MLA-747975026-ambo-traje-hombre-yves-saint-laurent-promo-slim-fit-chupin-_JM
+Devre: https://articulo.mercadolibre.com.ar/MLA-668623072-ambo-tizado-slim-fit-devre-_JM

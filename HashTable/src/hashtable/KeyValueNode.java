@@ -1,18 +1,20 @@
 package hashtable;
 
 import java.io.Serializable;
+import java.util.Map;
 
 /**
  * FINAL TSB 2018
  * @author Patricio Ezequiel Carranza, UTN FRC, legajo 60900
  */
-class KeyValueNode<K,V> implements Serializable {
+class KeyValueNode<K,V> implements Serializable, Map.Entry<K,V> {
     
     private static final long serialVersionUID = 42L;
     
-    K key;
-    V value;
+    private K key;
+    private V value;
     KeyValueFlags status;
+
     
     enum KeyValueFlags {
         ABIERTO, CERRADO, TUMBA;
@@ -22,4 +24,44 @@ class KeyValueNode<K,V> implements Serializable {
         status = KeyValueFlags.ABIERTO;
     }
     
+    KeyValueNode(K key, V value) {
+        status = KeyValueFlags.CERRADO;
+        this.key = key;
+        this.value = value;
+    }
+    
+    @Override
+    public K getKey() {
+        return key;
+    }
+
+    @Override
+    public V getValue() {
+        return value;
+    }
+
+    @Override
+    public V setValue(V value) {
+        V oldValue = this.value;
+        this.value = value;
+        return oldValue;
+    }
+    
+    @Override
+    public boolean equals(Object o) {
+        if(o == null) return false;
+        else if (!(o instanceof Map.Entry)) return false;
+        Map.Entry ent2 = (Map.Entry) o;
+        //De acuerdo a java.util.Map.Entry
+        return (this.getKey() == null ? ent2.getKey() == null : this.getKey().equals(ent2.getKey()))  &&
+               (this.getValue() == null ? ent2.getValue() == null : this.getValue().equals(ent2.getValue()));
+    }
+    
+    @Override
+    public int hashCode() {
+        //De acuerdo a java.util.Map.Entry
+        return (this.getKey() == null ? 0 : this.getKey().hashCode()) ^
+               (this.getValue() == null ? 0 : this.getValue().hashCode());
+
+    }
 }

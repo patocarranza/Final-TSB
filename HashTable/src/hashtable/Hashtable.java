@@ -1,9 +1,12 @@
 package hashtable;
 
 import java.io.Serializable;
+import java.util.AbstractCollection;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Dictionary;
 import java.util.Enumeration;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -21,6 +24,7 @@ public class Hashtable<K,V> extends Dictionary<K,V>
     private KeyValueNode<K,V>[] nodos;
     private final float porcentajeOcupacionMaximo;
     private int nodosInsertados;
+    private java.util.Hashtable ve;
      
     
     public Hashtable() {
@@ -31,8 +35,8 @@ public class Hashtable<K,V> extends Dictionary<K,V>
         this(initialCapacity, 0.5f);
     }
     
+    
     public Hashtable(int initialCapacity, float loadFactor) {  
-//        APUNTE
 //        el tamaño de la tabla siempre debería ser un número primo, y esto 
 //        debe garantizarse incluso si la clase implementada brinda un constructor que 
 //        acepte como parámetro el tamaño deseado para la tabla a crear. Sin importar
@@ -51,6 +55,8 @@ public class Hashtable<K,V> extends Dictionary<K,V>
 //      al 50% de la tabla, entonces la exploración cuadrática garantiza que la clave será insertada.
 
         this.nodosInsertados = 0;
+        //no importa si loadFactor es un valor mayor a %50, apenas se ejecute put()
+        //esta Hashtable duplicara su tamaño.
         this.porcentajeOcupacionMaximo = loadFactor;
         initialCapacity = getSiguientePrimo(initialCapacity);
         nodos = new KeyValueNode[initialCapacity];
@@ -59,7 +65,7 @@ public class Hashtable<K,V> extends Dictionary<K,V>
     }
     
     @Override
-    public V get(Object key) {
+    public synchronized V get(Object key) {
 //        Para buscar un objeto, se obtiene su dirección madre con la función de dispersion, y se entra en la tabla en esa dirección.
 //        Si el objeto en esa casilla no es el buscado, se explora hacia abajo hasta encontrarlo (búsqueda exitosa), 
 //        o hasta encontrar una casilla abierta (búsqueda infructuosa). Y de esta forma, la búsqueda puede plantearse así: 
@@ -85,14 +91,14 @@ public class Hashtable<K,V> extends Dictionary<K,V>
         int index = getKeyIndexConCuadratica((K)key, nodos);
 //      4)
         if(index != -1)
-            return nodos[index].value;
+            return nodos[index].getValue();
 //      5)
         else
             return null;
     }
 
     @Override
-    public V put(K key, V value) {
+    public synchronized V put(K key, V value) {
 //      Apunte
 //        Al principio, cada casilla está vacía o abierta (de allí el nombre de esta técnica). Si un objeto 
 //        O1 pide entrar en una casilla i y la misma está ABIERTA, O1 se almacena en ella.
@@ -154,9 +160,9 @@ public class Hashtable<K,V> extends Dictionary<K,V>
 //      2)
         int index = getKeyIndexConCuadratica((K)key, nodos);
         if(index != -1) {
-            V valRet = nodos[index].value;
+            V valRet = nodos[index].getValue();
 //            nodos[index].key = key;
-            nodos[index].value = value;
+            nodos[index].setValue(value);
             return valRet;
         }
         
@@ -166,9 +172,8 @@ public class Hashtable<K,V> extends Dictionary<K,V>
             
 //      4, 5)
         index = getIndexParaPutConCuadratica(key, nodos);
-        nodos[index].key = key;
-        nodos[index].value = value;
-        nodos[index].status = KeyValueNode.KeyValueFlags.CERRADO;
+        KeyValueNode<K,V> nodoNuevo = new KeyValueNode<>(key, value);
+        nodos[index] = nodoNuevo;
         nodosInsertados++;
         
 //      6)
@@ -188,7 +193,7 @@ public class Hashtable<K,V> extends Dictionary<K,V>
         return false;
     }
     
-    protected void rehash() {
+    protected synchronized void rehash() {
 //        Un control importante que debe realizarse es el del porcentaje de carga de la tabla (si se usa direccionamiento abierto) 
 //        Se debería monitorear la carga de la tabla, y en caso de llegar al punto de intervención, aumentar el tamaño de la 
 //        tabla (por ejemplo, en un 50% o hasta el número primo siguiente a ese 50%).
@@ -204,10 +209,13 @@ public class Hashtable<K,V> extends Dictionary<K,V>
 
 //      1)
         KeyValueNode<K,V>[] nuevoArray = new KeyValueNode[getSiguientePrimo(nodos.length*2)];
+        for(int i = 0; i < nuevoArray.length; i++)
+            nuevoArray[i] = new KeyValueNode<>();
+        
 //      2)
         for(KeyValueNode<K,V> node : nodos) {
             if(node.status == KeyValueNode.KeyValueFlags.CERRADO) {
-                int index = getIndexParaPutConCuadratica(node.key, nuevoArray);
+                int index = getIndexParaPutConCuadratica(node.getKey(), nuevoArray);
                 nuevoArray[index] = node;
             }
         }
@@ -244,7 +252,7 @@ public class Hashtable<K,V> extends Dictionary<K,V>
      * @return  
     */
     @Override
-    public V remove(Object key) {
+    public synchronized V remove(Object key) {
 ////         En algún momento se querrá eliminar un objeto de la tabla.
 ////         En principio, usamos marcado lógico para eliminar el objeto. Para ello, se debe buscar el objeto con el procedimiento anterior 
 ////         (exploracion cuadratica) y una vez hallado marcar la casilla como ABIERTA. Pero eso invalidaría el procedimiento de búsqueda: 
@@ -268,9 +276,9 @@ public class Hashtable<K,V> extends Dictionary<K,V>
         if(index != -1) {
             nodosInsertados--;
             nodos[index].status = KeyValueNode.KeyValueFlags.TUMBA;
-            nodos[index].key = null;
-            V value = nodos[index].value;
-            nodos[index].value = null;
+//            nodos[index].key = null;
+            V value = nodos[index].getValue();
+//            nodos[index].value = null;
             return value;
         }
 //      5)
@@ -279,12 +287,12 @@ public class Hashtable<K,V> extends Dictionary<K,V>
     }
     
     @Override
-    public int size() {
+    public synchronized int size() {
         return nodosInsertados;
     }
 
     @Override
-    public boolean isEmpty() {
+    public synchronized boolean isEmpty() {
         return nodosInsertados == 0;
     }
     
@@ -313,7 +321,7 @@ public class Hashtable<K,V> extends Dictionary<K,V>
      * @throws NullPointerException si keyParam es null (por contrato de java.util.HashTable.containsKey()).
      */
     @Override
-    public boolean containsKey(Object keyParam) 
+    public synchronized boolean containsKey(Object keyParam) 
             throws NullPointerException {
 //        1- Preguntar si keyParam es null. Puesto que no se permite almacenar null key
 //           (por el contrato de java.util.Hashtable), devolvemos NPE
@@ -367,7 +375,7 @@ public class Hashtable<K,V> extends Dictionary<K,V>
             else if(nodo.status == KeyValueNode.KeyValueFlags.TUMBA)
                 continue;
             else if(nodo.status == KeyValueNode.KeyValueFlags.CERRADO) {
-                if(nodo.key.equals(keyParam))
+                if(nodo.getKey().equals(keyParam))
                     return indexCuad;
                 continue;
             }
@@ -396,7 +404,7 @@ public class Hashtable<K,V> extends Dictionary<K,V>
             else if(nodo.status == KeyValueNode.KeyValueFlags.TUMBA)
                 return indexCuad;
             else if(nodo.status == KeyValueNode.KeyValueFlags.CERRADO) {
-                if(nodo.key.equals(keyParam))
+                if(nodo.getKey().equals(keyParam))
                     return indexCuad;
                 continue;
             }
@@ -404,46 +412,108 @@ public class Hashtable<K,V> extends Dictionary<K,V>
     }
 
     @Override
-    public boolean containsValue(Object value) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public synchronized boolean containsValue(Object value) {
+        if(value == null)
+            throw new NullPointerException("El value pasado por parametro no puede ser null.");
+        
+        try {
+            V castedValueParam = (V) value;
+        } catch(ClassCastException ex) {
+            throw ex;
+        }
+        
+        return this.values().contains((V) value);
+    }
+    
+    public synchronized boolean contains(Object value) {
+        return this.containsValue(value);
     }
 
     @Override
-    public void putAll(Map m) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public synchronized void putAll(Map<? extends K,? extends V> m) {
+        m.entrySet().forEach((entry) -> put(entry.getKey(), entry.getValue()));
     }
 
     @Override
-    public void clear() {
+    public synchronized void clear() {
         nodosInsertados = 0;
         for(int i = 0; i < nodos.length; i++)
             nodos[i] = new KeyValueNode<>();
     }
 
     @Override
-    public Set keySet() {
+    public synchronized Set<K> keySet() {
+        //DEBE SER FAIL-FAST!!
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public Collection values() {
+    public synchronized Collection<V> values() {
+        //DEBE SER FAIL-FAST!!
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public Set entrySet() {
+    public synchronized Set<Map.Entry<K,V>> entrySet() {
+        //DEBE SER FAIL-FAST!!
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public Enumeration<K> keys() {
+    public synchronized Enumeration<K> keys() {
+        //ESTO NO ES FAIL-FAST!
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public Enumeration<V> elements() {
+    public synchronized Enumeration<V> elements() {
+        //ESTO NO ES FAIL-FAST!
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
+    @Override
+    public synchronized String toString() {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
     
+    @Override
+    public boolean equals(Object o) {
+        if(o == null) return false;
+        //De acuerdo a contrato de java.util.Map
+        else if (!(o instanceof Map)) return false;
+        Map map2 = (Map) o;
+        return this.entrySet().equals(map2.entrySet());
+    }
+
+    @Override
+    public int hashCode() {
+        //De acuerdo a contrato de java.util.Map
+        for(Map.Entry entry : this.entrySet()) {
+            
+        }
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+    
+    @Override
+    public Hashtable clone() {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+    
+    private class ValuesCollection<V> extends AbstractCollection<V> {
+
+        @Override
+        public Iterator<V> iterator() {
+            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        }
+
+        @Override
+        public int size() {
+            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        }
+
+        public boolean remove(Object o) {
+            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        }
+
+    }
 }
