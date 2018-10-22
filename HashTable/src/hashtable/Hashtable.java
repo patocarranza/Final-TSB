@@ -2,10 +2,10 @@ package hashtable;
 
 import java.io.Serializable;
 import java.util.AbstractCollection;
+import java.util.AbstractSet;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Dictionary;
-import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -24,7 +24,6 @@ public class Hashtable<K,V> extends Dictionary<K,V>
     private KeyValueNode<K,V>[] nodos;
     private final float porcentajeOcupacionMaximo;
     private int nodosInsertados;
-    private java.util.Hashtable ve;
      
     
     public Hashtable() {
@@ -57,6 +56,10 @@ public class Hashtable<K,V> extends Dictionary<K,V>
         this.nodosInsertados = 0;
         //no importa si loadFactor es un valor mayor a %50, apenas se ejecute put()
         //esta Hashtable duplicara su tamaño.
+        while(loadFactor > 1.0f)
+            loadFactor -= 0.5f;
+        while(loadFactor <= 0.0f)
+            loadFactor += 0.5f;
         this.porcentajeOcupacionMaximo = loadFactor;
         initialCapacity = getSiguientePrimo(initialCapacity);
         nodos = new KeyValueNode[initialCapacity];
@@ -440,6 +443,56 @@ public class Hashtable<K,V> extends Dictionary<K,V>
         for(int i = 0; i < nodos.length; i++)
             nodos[i] = new KeyValueNode<>();
     }
+    
+    @Override
+    public synchronized String toString() {
+        StringBuilder str = new StringBuilder();
+        //Segun contrato java.util.Hashtable.toString()
+        for(Map.Entry<K,V> entry : this.entrySet()) 
+            str.append("{key = ")
+               .append(entry.getKey().toString())
+               .append(", value = ")
+               .append(entry.getValue().toString())
+               .append("}\n");
+       return str.toString();
+    }
+    
+    @Override
+    public boolean equals(Object o) {
+        if(o == null) return false;
+        //De acuerdo a contrato de java.util.Map
+        else if (!(o instanceof java.util.Map)) return false;
+        Map map2 = (Map) o;
+        if(this.size() != map2.size())
+            return false;
+        
+        for(Map.Entry entry : this.entrySet()) {
+            if(map2.containsKey(entry.getKey()) && map2.get(entry.getKey()).equals(entry.getValue()))
+                continue;
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        //De acuerdo a contrato de java.util.Map
+        int hash = 0;
+        for(Map.Entry entry : this.entrySet())
+            hash += entry.hashCode();
+        return hash;
+    }
+    
+    @Override
+    public Hashtable clone() {
+        //para evitar rehash() en la creacion
+        float tamanoInicial = this.size() * (this.porcentajeOcupacionMaximo + 1.0f);
+        Hashtable cloneTable = new Hashtable((int) tamanoInicial, 
+                                             this.porcentajeOcupacionMaximo);
+        for(Map.Entry<K,V> entry : this.entrySet())
+            cloneTable.put(entry.getKey(), entry.getValue());
+        return cloneTable;
+    }
 
     @Override
     public synchronized Set<K> keySet() {
@@ -461,48 +514,25 @@ public class Hashtable<K,V> extends Dictionary<K,V>
 
     @Override
     public synchronized Enumeration<K> keys() {
-        //ESTO NO ES FAIL-FAST!
+        //ESTO NO ES FAIL-FAST! The Enumerations returned by Hashtable's keys and elements methods are not fail-fast
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
     public synchronized Enumeration<V> elements() {
-        //ESTO NO ES FAIL-FAST!
+        //ESTO NO ES FAIL-FAST! The Enumerations returned by Hashtable's keys and elements methods are not fail-fast
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
-    @Override
-    public synchronized String toString() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
     
-    @Override
-    public boolean equals(Object o) {
-        if(o == null) return false;
-        //De acuerdo a contrato de java.util.Map
-        else if (!(o instanceof Map)) return false;
-        Map map2 = (Map) o;
-        return this.entrySet().equals(map2.entrySet());
-    }
-
-    @Override
-    public int hashCode() {
-        //De acuerdo a contrato de java.util.Map
-        for(Map.Entry entry : this.entrySet()) {
-            
-        }
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-    
-    @Override
-    public Hashtable clone() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
     
     private class ValuesCollection<V> extends AbstractCollection<V> {
 
         @Override
         public Iterator<V> iterator() {
+//            The iterators returned by the iterator method of the collections returned by all of this class's "collection view methods" 
+//            are fail-fast: if the Hashtable is structurally modified at any time after the iterator is created, in any way except through 
+//            the iterator's own remove method, the iterator will throw a ConcurrentModificationException
             throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
         }
 
@@ -515,5 +545,59 @@ public class Hashtable<K,V> extends Dictionary<K,V>
             throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
         }
 
+    }
+    
+    private class KeySet<K> extends AbstractSet<K> {
+
+        @Override
+        public Iterator<K> iterator() {
+//            The iterators returned by the iterator method of the collections returned by all of this class's "collection view methods" 
+//            are fail-fast: if the Hashtable is structurally modified at any time after the iterator is created, in any way except through 
+//            the iterator's own remove method, the iterator will throw a ConcurrentModificationException
+            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        }
+
+        @Override
+        public int size() {
+            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        }
+        
+    }
+    
+    private class EntrySet extends AbstractSet<Map.Entry<K,V>>  {
+
+        @Override
+        public Iterator<Map.Entry<K, V>> iterator() {
+//            The iterators returned by the iterator method of the collections returned by all of this class's "collection view methods" 
+//            are fail-fast: if the Hashtable is structurally modified at any time after the iterator is created, in any way except through 
+//            the iterator's own remove method, the iterator will throw a ConcurrentModificationException
+            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        }
+
+        @Override
+        public int size() {
+            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        }
+    
+    }
+    
+    private class Enumeration<P> implements java.util.Enumeration<P> {
+        
+        Collection<P> items;
+        
+        Enumeration(Collection<P> items) {
+            this.items = items;
+        }
+
+        @Override
+        public boolean hasMoreElements() {
+            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        }
+
+        @Override
+        public P nextElement() {
+            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        }
+        
     }
 }
