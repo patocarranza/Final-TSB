@@ -14,10 +14,15 @@ objetos no es insertado, entonces debemos hacer el rehash antes de meter el nuev
 - acordate del synchronized
 - Probar que ande con y sin generics
 - equals() y hashCode() de las dos implementaciones de hashtable y con los mismos objetos deberian dar iguales (o sea, true y el mismo hashcode)
+- Hay 3 metodos que son view collection: keySet(), values() y entrySet(). Estos 3 metodos devuelven colecciones que estan backeadas con el mapa, o sea
+que cualquier impacto en el mapa (put(), putAll(), clear(), remove() y cualquier metodo que cambie la cantidad de nodos) se verán inmediatamente reflejados
+en las colecciones. Estas colecciones deben ser creadas con Collections.synchronizedXXX() (segun explicado en https://softwarecave.org/2014/03/19/views-in-java-collections-framework/) ya que Hashtable es synchronized. Pero hay que implementar las coleccines
 
+https://softwarecave.org/2014/03/19/views-in-java-collections-framework/
 
-
-TRAJES
-======
-YvesSaintLaurent: https://articulo.mercadolibre.com.ar/MLA-747975026-ambo-traje-hombre-yves-saint-laurent-promo-slim-fit-chupin-_JM
-Devre: https://articulo.mercadolibre.com.ar/MLA-668623072-ambo-tizado-slim-fit-devre-_JM
+https://stackoverflow.com/questions/25339056/understanding-primefaces-process-update-and-jsf-fajax-execute-render-attributes
+https://www.pdfdrive.com/primefaces-cookbook-2nd-edition-d33418941.html
+https://yigitdarcin.com/2010/01/27/powerful-ajax-with-update-and-process-attributes-in-primefaces/
+https://www.beyondjava.net/a-comprehensive-guide-to-jsf-ajax
+https://docs.oracle.com/javaee/7/tutorial/jsf-intro007.htm
+https://docs.oracle.com/javaee/6/tutorial/doc/gknoj.html

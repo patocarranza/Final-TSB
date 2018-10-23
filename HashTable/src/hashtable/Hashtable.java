@@ -3,11 +3,12 @@ package hashtable;
 import java.io.Serializable;
 import java.util.AbstractCollection;
 import java.util.AbstractSet;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Dictionary;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 
 /**
@@ -513,15 +514,13 @@ public class Hashtable<K,V> extends Dictionary<K,V>
     }
 
     @Override
-    public synchronized Enumeration<K> keys() {
-        //ESTO NO ES FAIL-FAST! The Enumerations returned by Hashtable's keys and elements methods are not fail-fast
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public synchronized java.util.Enumeration<K> keys() {
+        return new Enumeration<>(this.keySet());
     }
 
     @Override
-    public synchronized Enumeration<V> elements() {
-        //ESTO NO ES FAIL-FAST! The Enumerations returned by Hashtable's keys and elements methods are not fail-fast
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public synchronized java.util.Enumeration<V> elements() {
+        return new Enumeration<>(this.values());
     }
 
     
@@ -583,20 +582,29 @@ public class Hashtable<K,V> extends Dictionary<K,V>
     
     private class Enumeration<P> implements java.util.Enumeration<P> {
         
-        Collection<P> items;
+        ArrayList<P> items;
+        int currentIndex;
         
         Enumeration(Collection<P> items) {
-            this.items = items;
+            this.items = new ArrayList<>(items);
+            this.currentIndex = 0;
         }
 
         @Override
         public boolean hasMoreElements() {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+            if(items.size() <= currentIndex)
+                return false;
+            return true;
         }
 
         @Override
         public P nextElement() {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+            try {
+                return items.get(currentIndex);
+            } catch(IndexOutOfBoundsException ex) {
+                //Segun contrato de java.util.Enumeration.nextElement()
+                throw new NoSuchElementException("No hay mas elementos en esta Enumeration.");
+            }            
         }
         
     }
