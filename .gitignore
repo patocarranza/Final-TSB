@@ -10,3 +10,5 @@ Deployment/Installers/
 *~
 Thumbs.db
 desktop.ini
+/JInternalFrameLeak/nbproject/private/
+/JInternalFrameLeak/build/

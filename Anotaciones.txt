@@ -20,9 +20,18 @@ en las colecciones. Estas colecciones deben ser creadas con Collections.synchron
 
 https://softwarecave.org/2014/03/19/views-in-java-collections-framework/
 
-https://stackoverflow.com/questions/25339056/understanding-primefaces-process-update-and-jsf-fajax-execute-render-attributes
-https://www.pdfdrive.com/primefaces-cookbook-2nd-edition-d33418941.html
-https://yigitdarcin.com/2010/01/27/powerful-ajax-with-update-and-process-attributes-in-primefaces/
-https://www.beyondjava.net/a-comprehensive-guide-to-jsf-ajax
-https://docs.oracle.com/javaee/7/tutorial/jsf-intro007.htm
-https://docs.oracle.com/javaee/6/tutorial/doc/gknoj.html
+
+
+"UTF-8"
+
+Gastos enero
+============
+Consumo cash: $42.202 (NO SIGUEN 2275 + 1805 + 600 + 300 )
+Consumo bbva: $8862 (NO SIGUEN $5000)
+Consumo bancor: $22.198 
+consumo payo pato: US$385 (NO SIGUEN 32.26 + 56.73 + 30.30 + 8.86)
+consumo payo betty: US$426.25 
+
+TOTAL = $ 73.262 (NO SIGUEN $9980) 
+        US$ 811.25 (NO SIGUEN $128.15)
+

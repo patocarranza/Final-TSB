@@ -5,6 +5,8 @@ import java.util.AbstractCollection;
 import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.ConcurrentModificationException;
 import java.util.Dictionary;
 import java.util.Iterator;
 import java.util.Map;
@@ -24,7 +26,9 @@ public class Hashtable<K,V> extends Dictionary<K,V>
     
     private KeyValueNode<K,V>[] nodos;
     private final float porcentajeOcupacionMaximo;
-    private int nodosInsertados;
+    private int nodosInsertados;    
+    
+//    private volatile transient int hashEstructura;
      
     
     public Hashtable() {
@@ -65,7 +69,14 @@ public class Hashtable<K,V> extends Dictionary<K,V>
         initialCapacity = getSiguientePrimo(initialCapacity);
         nodos = new KeyValueNode[initialCapacity];
         for(int i = 0; i < initialCapacity; i++)
-            nodos[i] = new KeyValueNode<>();
+            nodos[i] = new KeyValueNode<>();                
+    }
+    
+    public Hashtable(Map<? extends K,? extends V> t) {
+        //porcentajeOcupacionMaximo por default es 0.5, asi que duplicamos el tamaño
+        //para evitar un rehash durante este constructor.
+        this(t.size() * 2);
+        this.putAll(t);
     }
     
     @Override
@@ -103,6 +114,7 @@ public class Hashtable<K,V> extends Dictionary<K,V>
 
     @Override
     public synchronized V put(K key, V value) {
+//        CAMBIA ESTRUCTURA DE HASHTABLE
 //      Apunte
 //        Al principio, cada casilla está vacía o abierta (de allí el nombre de esta técnica). Si un objeto 
 //        O1 pide entrar en una casilla i y la misma está ABIERTA, O1 se almacena en ella.
@@ -179,6 +191,7 @@ public class Hashtable<K,V> extends Dictionary<K,V>
         KeyValueNode<K,V> nodoNuevo = new KeyValueNode<>(key, value);
         nodos[index] = nodoNuevo;
         nodosInsertados++;
+//        hashEstructura = this.hashCode();
         
 //      6)
         return null;
@@ -198,6 +211,7 @@ public class Hashtable<K,V> extends Dictionary<K,V>
     }
     
     protected synchronized void rehash() {
+//        CAMBIA ESTRUCTURA DE HASHTABLE
 //        Un control importante que debe realizarse es el del porcentaje de carga de la tabla (si se usa direccionamiento abierto) 
 //        Se debería monitorear la carga de la tabla, y en caso de llegar al punto de intervención, aumentar el tamaño de la 
 //        tabla (por ejemplo, en un 50% o hasta el número primo siguiente a ese 50%).
@@ -225,6 +239,7 @@ public class Hashtable<K,V> extends Dictionary<K,V>
         }
 //      3)
         nodos = nuevoArray;
+//        hashEstructura = this.hashCode();
     }
 
     private boolean esPrimo(int num) {        
@@ -257,6 +272,7 @@ public class Hashtable<K,V> extends Dictionary<K,V>
     */
     @Override
     public synchronized V remove(Object key) {
+//        CAMBIA ESTRUCTURA DE HASHTABLE
 ////         En algún momento se querrá eliminar un objeto de la tabla.
 ////         En principio, usamos marcado lógico para eliminar el objeto. Para ello, se debe buscar el objeto con el procedimiento anterior 
 ////         (exploracion cuadratica) y una vez hallado marcar la casilla como ABIERTA. Pero eso invalidaría el procedimiento de búsqueda: 
@@ -283,6 +299,8 @@ public class Hashtable<K,V> extends Dictionary<K,V>
 //            nodos[index].key = null;
             V value = nodos[index].getValue();
 //            nodos[index].value = null;
+
+//            hashEstructura = this.hashCode();
             return value;
         }
 //      5)
@@ -301,7 +319,7 @@ public class Hashtable<K,V> extends Dictionary<K,V>
     }
     
     /**
-     * Metodo para checkear que las keys pasadas como Object sean validas.
+     * Metodo para checkear que la key pasada como Object sea valida.
      * @param keyParam
      * @throws NullPointerException si la key es null (no se permite segun contrato de java.util.HashTable)
      * @throws ClassCastException  si la key no es casteable a generic K
@@ -417,16 +435,30 @@ public class Hashtable<K,V> extends Dictionary<K,V>
 
     @Override
     public synchronized boolean containsValue(Object value) {
+        checkValidValue(value);
         if(value == null)
             throw new NullPointerException("El value pasado por parametro no puede ser null.");
         
+        checkValidValue(value);
+        return this.values().contains((V) value);
+    }
+    
+    /**
+     * Metodo para checkear que el Value pasado como Object sea valido.
+     * @param valueParam
+     * @throws NullPointerException si el value es null (no se permite segun contrato de java.util.HashTable)
+     * @throws ClassCastException  si el value no es casteable a generic V
+     */
+    private void checkValidValue(Object valueParam)
+            throws NullPointerException, ClassCastException {
+        if(valueParam == null)
+            throw new NullPointerException("El value pasado por parametro no puede ser null.");
+        
         try {
-            V castedValueParam = (V) value;
+            V castedKeyParam = (V) valueParam;
         } catch(ClassCastException ex) {
             throw ex;
         }
-        
-        return this.values().contains((V) value);
     }
     
     public synchronized boolean contains(Object value) {
@@ -435,14 +467,18 @@ public class Hashtable<K,V> extends Dictionary<K,V>
 
     @Override
     public synchronized void putAll(Map<? extends K,? extends V> m) {
+//        CAMBIA ESTRUCTURA DE HASHTABLE
         m.entrySet().forEach((entry) -> put(entry.getKey(), entry.getValue()));
+//        hashEstructura = this.hashCode();
     }
 
     @Override
     public synchronized void clear() {
+//        CAMBIA ESTRUCTURA DE HASHTABLE
         nodosInsertados = 0;
         for(int i = 0; i < nodos.length; i++)
             nodos[i] = new KeyValueNode<>();
+//        hashEstructura = this.hashCode();
     }
     
     @Override
@@ -479,45 +515,64 @@ public class Hashtable<K,V> extends Dictionary<K,V>
     public int hashCode() {
         //De acuerdo a contrato de java.util.Map
         int hash = 0;
-        for(Map.Entry entry : this.entrySet())
-            hash += entry.hashCode();
+        int count = 1;
+        for(Map.Entry entry : this.entrySet()) {
+            //Hay momentos, como el remove(), que no quitan un nodo de la tabla, sino
+            //que simplemente le cambian la bandera de status. De modo que la bandera
+            //de status debe ser parte de este hash.
+            if(count++ % 2 == 0)
+                hash += entry.hashCode();
+            else
+                hash -= entry.hashCode();
+            
+        }
         return hash;
     }
     
     @Override
-    public Hashtable clone() {
-        //para evitar rehash() en la creacion
-        float tamanoInicial = this.size() * (this.porcentajeOcupacionMaximo + 1.0f);
-        Hashtable cloneTable = new Hashtable((int) tamanoInicial, 
-                                             this.porcentajeOcupacionMaximo);
+    public Hashtable clone() 
+            throws CloneNotSupportedException {
+        //de acuerdo a https://stackoverflow.com/a/5431006/7416707
+        Hashtable<K,V> cloneTable = (Hashtable<K,V>) super.clone();
         for(Map.Entry<K,V> entry : this.entrySet())
             cloneTable.put(entry.getKey(), entry.getValue());
+        
         return cloneTable;
     }
 
+    
+    //Hashtable indica en su documentacion: The iterators returned by the iterator 
+    //method of the collections returned by all of this class's "collection view methods"
+    //are fail-fast: if the Hashtable is structurally modified at any time after the 
+    //iterator is created, in any way except through the iterator's own remove method, 
+    //the iterator will throw a ConcurrentModificationException
     @Override
-    public synchronized Set<K> keySet() {
-        //DEBE SER FAIL-FAST!!
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public synchronized Set<K> keySet()
+            throws ConcurrentModificationException {
+        return Collections.synchronizedSet(new KeySet<>());
     }
 
     @Override
-    public synchronized Collection<V> values() {
-        //DEBE SER FAIL-FAST!!
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public synchronized Collection<V> values()
+            throws ConcurrentModificationException {
+        return Collections.synchronizedCollection(new ValuesCollection<>());
     }
 
     @Override
-    public synchronized Set<Map.Entry<K,V>> entrySet() {
-        //DEBE SER FAIL-FAST!!
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public synchronized Set<Map.Entry<K,V>> entrySet() 
+            throws ConcurrentModificationException  {
+        return Collections.synchronizedSet(new EntrySet<>());
     }
 
+    //Hashtable indica en su documentacion: The Enumerations returned by Hashtable's 
+    //keys and elements methods are not fail-fast.
     @Override
     public synchronized java.util.Enumeration<K> keys() {
         return new Enumeration<>(this.keySet());
     }
 
+    //Hashtable indica en su documentacion: The Enumerations returned by Hashtable's 
+    //keys and elements methods are not fail-fast.
     @Override
     public synchronized java.util.Enumeration<V> elements() {
         return new Enumeration<>(this.values());
@@ -525,65 +580,178 @@ public class Hashtable<K,V> extends Dictionary<K,V>
 
     
     
+    
+    
+    
     private class ValuesCollection<V> extends AbstractCollection<V> {
-
+        //The collection supports element removal, which removes the corresponding mapping from
+        //the map, via the Iterator.remove, Collection.remove, removeAll, retainAll and clear
+        //operations. It does not support the add or addAll operations.
+        
         @Override
         public Iterator<V> iterator() {
 //            The iterators returned by the iterator method of the collections returned by all of this class's "collection view methods" 
 //            are fail-fast: if the Hashtable is structurally modified at any time after the iterator is created, in any way except through 
 //            the iterator's own remove method, the iterator will throw a ConcurrentModificationException
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+            return new IteratorFailFast<>(Hashtable.this.hashCode(), IteratorType.VALUES);
         }
 
         @Override
         public int size() {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        }
-
-        public boolean remove(Object o) {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        }
-
-    }
-    
-    private class KeySet<K> extends AbstractSet<K> {
-
-        @Override
-        public Iterator<K> iterator() {
-//            The iterators returned by the iterator method of the collections returned by all of this class's "collection view methods" 
-//            are fail-fast: if the Hashtable is structurally modified at any time after the iterator is created, in any way except through 
-//            the iterator's own remove method, the iterator will throw a ConcurrentModificationException
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        }
-
-        @Override
-        public int size() {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+            return nodosInsertados;
         }
         
+        @Override
+        public boolean addAll(Collection<? extends V> c) {
+            throw new UnsupportedOperationException();
+        }
     }
     
-    private class EntrySet extends AbstractSet<Map.Entry<K,V>>  {
+    
+    
+    private class KeySet<K> extends AbstractSet<K> {
+        //The set supports element removal, which removes the corresponding mapping 
+        //from the map, via the Iterator.remove, Set.remove, removeAll, retainAll, 
+        //and clear operations. It does not support the add or addAll operations.
+        
+        @Override
+        public Iterator<K> iterator() {
+            return new IteratorFailFast<>(Hashtable.this.hashCode(), IteratorType.KEY);
+        }
 
+        @Override
+        public int size() {
+            return nodosInsertados;
+        }
+        
+        
+        @Override
+        public boolean addAll(Collection<? extends K> c) {
+            throw new UnsupportedOperationException();
+        }
+    }
+    
+    
+    
+    private class EntrySet<K,V> extends AbstractSet<Map.Entry<K,V>>  {
+        //If the map is modified while an iteration over the set is in progress 
+        //(except through the iterator's own remove operation, or through the setValue 
+        //operation on a map entry returned by the iterator) the results of the iteration are undefined
+        
+//        OJO ACA QUE SE PERMIETE USAR EL setValue() DE UNA ENTRY SIN QUE TIRE CONCURRENTEXCEPTION!
+        
         @Override
         public Iterator<Map.Entry<K, V>> iterator() {
 //            The iterators returned by the iterator method of the collections returned by all of this class's "collection view methods" 
 //            are fail-fast: if the Hashtable is structurally modified at any time after the iterator is created, in any way except through 
 //            the iterator's own remove method, the iterator will throw a ConcurrentModificationException
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+            return new IteratorFailFast<>(Hashtable.this.hashCode(), IteratorType.ENTRY);
         }
 
         @Override
-        public int size() {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        public int size() { 
+            return nodosInsertados;
         }
-    
+        
+        @Override
+        public boolean addAll(Collection<? extends Map.Entry<K,V>>  c) {
+            throw new UnsupportedOperationException();
+        }
     }
+    
+    
+    
+    
+    private enum IteratorType {
+        VALUES, KEY, ENTRY;
+    }
+    
+    private class IteratorFailFast<P> implements Iterator<P> {
+        
+//        private ArrayList<P> items;
+        private int currentIndex;
+        private Map.Entry<K,V> ultimoObjetoReturned;
+        private int hashAlCrearIterator;
+        private boolean nextFueLlamado;
+        private final IteratorType type;
+        
+        IteratorFailFast(int hashEstructura, IteratorType type) {
+            this.currentIndex = 0;
+            this.hashAlCrearIterator = hashEstructura;
+            this.type = type;
+             
+        }
+
+        @Override
+        public boolean hasNext() {
+            //DEBE SER FAIL-FAST!!
+            this.checkConcurrentModEx();
+                
+            if(nodos.length <= currentIndex)
+                return false;
+            return true;
+        }
+        
+        
+        private void checkConcurrentModEx() {
+            if(hashAlCrearIterator != Hashtable.this.hashCode())
+                throw new ConcurrentModificationException("Se ha modificado la estructura de la Hashtable mientras este iterador estaba en uso.");
+        }
+
+        @Override
+        public P next() {
+            //DEBE SER FAIL-FAST!!
+            this.checkConcurrentModEx();
+            
+            try {
+                ultimoObjetoReturned = nodos[currentIndex++];
+                P genericAReturnear = null;
+                if(this.type == IteratorType.KEY)
+                    genericAReturnear = (P) ultimoObjetoReturned.getKey();
+                else if(this.type == IteratorType.VALUES)
+                    genericAReturnear = (P) ultimoObjetoReturned.getValue();
+                else if(this.type == IteratorType.ENTRY)
+                    genericAReturnear = (P) ultimoObjetoReturned;
+                nextFueLlamado = true;
+                return genericAReturnear;
+            } catch(IndexOutOfBoundsException ex) {
+                //Segun contrato de java.util.Iterator
+                throw new NoSuchElementException("No hay mas elementos en este Enumeration.");
+            }  
+        }
+
+        @Override
+        public void remove() {
+            //NO DEBE FALLAR, A MENOS QUE HAYA UN CAMBIO ESTRUCTURAL ANTES DE APLICAR ESTE REMOVE!
+            //DEBE SER FAIL-FAST!!
+            this.checkConcurrentModEx();
+            
+            //Segun contrato java.util.Iterator
+            if(! nextFueLlamado)
+                throw new IllegalStateException("Antes de llamar remove() se debe llamar a next().");
+            
+//            if(type == IteratorType.KEY)
+                Hashtable.this.remove(ultimoObjetoReturned.getKey());
+//            else if(type == IteratorType.ENTRY)
+//                Hashtable.this.remove(((Entry<K,V>)ultimoObjetoReturned).getKey());
+//            else if(type == IteratorType.VALUES) {
+//                Hashtable.this.re
+//            }
+            
+            nextFueLlamado = false;
+            ultimoObjetoReturned = null;
+            this.hashAlCrearIterator = Hashtable.this.hashCode();
+        }
+        
+    }
+    
+    
+    
     
     private class Enumeration<P> implements java.util.Enumeration<P> {
         
-        ArrayList<P> items;
-        int currentIndex;
+        private ArrayList<P> items;
+        private int currentIndex;
         
         Enumeration(Collection<P> items) {
             this.items = new ArrayList<>(items);
@@ -600,12 +768,11 @@ public class Hashtable<K,V> extends Dictionary<K,V>
         @Override
         public P nextElement() {
             try {
-                return items.get(currentIndex);
+                return items.get(currentIndex++);
             } catch(IndexOutOfBoundsException ex) {
                 //Segun contrato de java.util.Enumeration.nextElement()
                 throw new NoSuchElementException("No hay mas elementos en esta Enumeration.");
             }            
         }
-        
     }
 }
