@@ -1,4 +1,4 @@
-package hashtable;
+package edu.utn.frc.tsb;
 
 import java.io.Serializable;
 import java.util.Map;

@@ -1,4 +1,4 @@
-package hashtable;
+package edu.utn.frc.tsb;
 
 import java.io.Serializable;
 import java.util.AbstractCollection;
@@ -26,7 +26,7 @@ public class Hashtable<K,V> extends Dictionary<K,V>
     
     private KeyValueNode<K,V>[] nodos;
     private final float porcentajeOcupacionMaximo;
-    private int nodosInsertados;    
+    private int nodosInsertados;
     
 //    private volatile transient int hashEstructura;
      
@@ -59,6 +59,11 @@ public class Hashtable<K,V> extends Dictionary<K,V>
 //      al 50% de la tabla, entonces la exploración cuadrática garantiza que la clave será insertada.
 
         this.nodosInsertados = 0;
+        
+        //Segun contrato java.util.Hashtable y https://hg.openjdk.java.net/jdk8/jdk8/jdk/file/687fd7c7986d/test/java/util/Hashtable/IllegalLoadFactor.java
+        if(loadFactor <= 0.0f || Float.isNaN(loadFactor) || initialCapacity < 0)
+            throw new IllegalArgumentException("loadFactor o initialCapacity son negativos o no son un numero");
+        
         //no importa si loadFactor es un valor mayor a %50, apenas se ejecute put()
         //esta Hashtable duplicara su tamaño.
         while(loadFactor > 1.0f)
@@ -77,6 +82,14 @@ public class Hashtable<K,V> extends Dictionary<K,V>
         //para evitar un rehash durante este constructor.
         this(t.size() * 2);
         this.putAll(t);
+    }
+    
+    public int getCapacity() {
+        return nodos.length;
+    }
+    
+    public float getLoadFactor() {
+        return porcentajeOcupacionMaximo;
     }
     
     @Override
@@ -242,7 +255,7 @@ public class Hashtable<K,V> extends Dictionary<K,V>
 //        hashEstructura = this.hashCode();
     }
 
-    private boolean esPrimo(int num) {        
+    static boolean esPrimo(int num) {        
         if(num <= 2 || num % 2 == 0 ) 
             return false;
         
@@ -256,7 +269,7 @@ public class Hashtable<K,V> extends Dictionary<K,V>
         return true;
     }
     
-    private int getSiguientePrimo(int num) {
+    static int getSiguientePrimo(int num) {
         if(num % 2 == 0)
             num++;
         for(; ; num+=2){
