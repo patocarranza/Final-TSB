@@ -7,18 +7,19 @@ COSAS A TESTEAR
 - probar colisiones. Para ello el hashCode() de dos keys deben dar iguales o muy similares (cosa que "int index = key.hashCode() % keys.length" den el mismo resultado). 
 Al encontrar una colision debe ser capaz de encontrar la key u objeto correspondiente (y uno el que es igual o muy similar).
 - put y get deberian ser, en gran parte, O(1) (o sea, que su velocidad no dependan de cuantos objetos hay en la hash table)
-- Inicializar el hash con 10 lugares y meterle 20/30/40 objetos y verificar que siempre todos los objetos sean insertados (si en algun momento alguno de los
-objetos no es insertado, entonces debemos hacer el rehash antes de meter el nuevo objeto).
-- hashcodes negativos
-- usar la HashTable sin usar generics (o sea new HashTable() en vez de new HashTable<>())
-- acordate del synchronized
-- Probar que ande con y sin generics
-- equals() y hashCode() de las dos implementaciones de hashtable y con los mismos objetos deberian dar iguales (o sea, true y el mismo hashcode)
+(LISTO) - usar la HashTable sin usar generics (o sea new HashTable() en vez de new HashTable<>())
+(LISTO) - Probar que ande con y sin generics
+(LISTO) - equals() y hashCode() de las dos implementaciones de hashtable y con los mismos objetos deberian dar iguales (o sea el equals debe dar true)
 - Hay 3 metodos que son view collection: keySet(), values() y entrySet(). Estos 3 metodos devuelven colecciones que estan backeadas con el mapa, o sea
 que cualquier impacto en el mapa (put(), putAll(), clear(), remove() y cualquier metodo que cambie la cantidad de nodos) se verán inmediatamente reflejados
 en las colecciones. Estas colecciones deben ser creadas con Collections.synchronizedXXX() (segun explicado en https://softwarecave.org/2014/03/19/views-in-java-collections-framework/) ya que Hashtable es synchronized. Pero hay que implementar las coleccines
 
 https://softwarecave.org/2014/03/19/views-in-java-collections-framework/
+
+
+if(size() <= objetosDevueltos)
+                return false;
+            return true;
 
 
 

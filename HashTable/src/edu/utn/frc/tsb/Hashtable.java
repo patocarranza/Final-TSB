@@ -27,6 +27,7 @@ public class Hashtable<K,V> extends Dictionary<K,V>
     private KeyValueNode<K,V>[] nodos;
     private final float porcentajeOcupacionMaximo;
     private int nodosInsertados;
+    private int ultimoHashcodeCalculado;
     
 //    private volatile transient int hashEstructura;
      
@@ -75,7 +76,9 @@ public class Hashtable<K,V> extends Dictionary<K,V>
             initialCapacity = getSiguientePrimo(initialCapacity);
         nodos = new KeyValueNode[initialCapacity];
         for(int i = 0; i < initialCapacity; i++)
-            nodos[i] = new KeyValueNode<>();                
+            nodos[i] = new KeyValueNode<>();     
+        
+        this.ultimoHashcodeCalculado = hashCode();
     }
     
     public Hashtable(Map<? extends K,? extends V> t) {
@@ -83,6 +86,7 @@ public class Hashtable<K,V> extends Dictionary<K,V>
         //para evitar un rehash durante este constructor.
         this(t.size() * 2);
         this.putAll(t);
+        this.ultimoHashcodeCalculado = hashCode();
     }
     
     public int getCapacity() {
@@ -208,7 +212,7 @@ public class Hashtable<K,V> extends Dictionary<K,V>
         KeyValueNode<K,V> nodoNuevo = new KeyValueNode<>(key, value);
         nodos[index] = nodoNuevo;
         nodosInsertados++;
-//        hashEstructura = this.hashCode();
+        this.ultimoHashcodeCalculado = this.hashCode();
         
 //      6)
         return null;
@@ -222,7 +226,9 @@ public class Hashtable<K,V> extends Dictionary<K,V>
      * un nodo mas, sino falso.
      */
     private boolean checkOcupacionMasUno() {
-        if(((size() + 1) / nodos.length) >= porcentajeOcupacionMaximo)
+        float size = size() + 1;
+        float length = nodos.length;
+        if((size / length) >= porcentajeOcupacionMaximo)
             return true;
         return false;
     }
@@ -256,7 +262,7 @@ public class Hashtable<K,V> extends Dictionary<K,V>
         }
 //      3)
         nodos = nuevoArray;
-//        hashEstructura = this.hashCode();
+        this.ultimoHashcodeCalculado = this.hashCode();
     }
 
     protected static boolean esPrimo(int num) {        
@@ -322,7 +328,7 @@ public class Hashtable<K,V> extends Dictionary<K,V>
             V value = nodos[index].getValue();
 //            nodos[index].value = null;
 
-//            hashEstructura = this.hashCode();
+            this.ultimoHashcodeCalculado = this.hashCode();
             return value;
         }
 //      5)
@@ -500,9 +506,11 @@ public class Hashtable<K,V> extends Dictionary<K,V>
 
     @Override
     public synchronized void putAll(Map<? extends K,? extends V> m) {
+        if(m == this)
+            return;
 //        CAMBIA ESTRUCTURA DE HASHTABLE
         m.entrySet().forEach((entry) -> put(entry.getKey(), entry.getValue()));
-//        hashEstructura = this.hashCode();
+        this.ultimoHashcodeCalculado = this.hashCode();
     }
 
     @Override
@@ -511,7 +519,7 @@ public class Hashtable<K,V> extends Dictionary<K,V>
         nodosInsertados = 0;
         for(int i = 0; i < nodos.length; i++)
             nodos[i] = new KeyValueNode<>();
-//        hashEstructura = this.hashCode();
+        this.ultimoHashcodeCalculado = this.hashCode();
     }
     
     @Override
@@ -549,15 +557,20 @@ public class Hashtable<K,V> extends Dictionary<K,V>
         //De acuerdo a contrato de java.util.Map
         int hash = 0;
         int count = 1;
-        for(Map.Entry entry : this.nodos) {
+        for(KeyValueNode nodo : this.nodos) {
+            //No hace falta seguir recorriendo, ya hemos visitado todas las posiciones
+            //del arreglo que tenian un objeto.
+            if(count > size())
+                break;
             //Hay momentos, como el remove(), que no quitan un nodo de la tabla, sino
-            //que simplemente le cambian la bandera de status. De modo que la bandera
-            //de status debe ser parte de este hash.
-            if(count++ % 2 == 0)
-                hash += entry.hashCode();
-            else
-                hash -= entry.hashCode();
+            //que simplemente le cambian la bandera de status. Los unicos nodos que
+            //estan activos en la tabla son aquellos que tienen status CERRADO.
+            if(nodo.status != KeyValueNode.KeyValueFlags.CERRADO)
+                continue;
             
+            //De acuerdo a estipulado por java.util.Map.hashCode() junto con la 
+            //documentacion de Map.Entry y AbstractMap.
+            hash += nodo.hashCode();
         }
         return hash;
     }
@@ -707,12 +720,13 @@ public class Hashtable<K,V> extends Dictionary<K,V>
         private int hashAlCrearIterator;
         private boolean nextFueLlamado;
         private final IteratorType type;
+        private int objetosDevueltos;
         
         IteratorFailFast(int hashEstructura, IteratorType type) {
             this.currentIndex = -1;
             this.hashAlCrearIterator = hashEstructura;
             this.type = type;
-             
+            this.objetosDevueltos = 0;
         }
 
         @Override
@@ -720,13 +734,13 @@ public class Hashtable<K,V> extends Dictionary<K,V>
             //DEBE SER FAIL-FAST!!
             this.checkConcurrentModEx();
 
-            if(nodos.length <= (currentIndex+1))
+            if(size() <= objetosDevueltos)
                 return false;
             return true;
         }
         
         private void checkConcurrentModEx() {
-            if(hashAlCrearIterator != Hashtable.this.hashCode())
+            if(hashAlCrearIterator != ultimoHashcodeCalculado)
                 throw new ConcurrentModificationException("Se ha modificado la estructura de la Hashtable mientras este iterador estaba en uso.");
         }
 
@@ -755,6 +769,7 @@ public class Hashtable<K,V> extends Dictionary<K,V>
                 else if(this.type == IteratorType.ENTRY)
                     genericAReturnear = (P) ultimoObjetoReturned;
                 nextFueLlamado = true;
+                objetosDevueltos++;
                 return genericAReturnear;
             } catch(IndexOutOfBoundsException ex) {
                 //Segun contrato de java.util.Iterator
@@ -782,9 +797,8 @@ public class Hashtable<K,V> extends Dictionary<K,V>
             
             nextFueLlamado = false;
             ultimoObjetoReturned = null;
-            this.hashAlCrearIterator = Hashtable.this.hashCode();
+            this.hashAlCrearIterator = ultimoHashcodeCalculado;
         }
-        
     }
     
     

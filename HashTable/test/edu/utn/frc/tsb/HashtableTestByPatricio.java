@@ -99,12 +99,13 @@ public class HashtableTestByPatricio {
         table.put(30, "por favor");
         assertEquals("hola", table.get(20));
         assertNotEquals("hola2", table.get(20));
-        assertEquals("por favor", table.get(30));
+        assertEquals("por favor", table.get(30));        
         
         //tiene que reemplazar el valor 
         String valorAnterior = table.put(20, "gracias");
         assertEquals("hola", valorAnterior);
         assertEquals("gracias", table.get(20));
+        assertEquals(2, table.size());
     }
     
     @Test (expected = NullPointerException.class)
@@ -134,6 +135,14 @@ public class HashtableTestByPatricio {
         assertEquals(Hashtable.getSiguientePrimo(31*2), table.getCapacity());
         assertNotEquals(31, table.getCapacity());
         assertEquals(3, table.size());
+        
+        //Aca probamos autorehash
+        table = new Hashtable<>(3);
+        int capacity = table.getCapacity();
+        assertEquals(3, capacity);
+        table.put(10, "rojo");
+        table.put(20, "azul");
+        assertEquals(Hashtable.getSiguientePrimo(capacity*2), table.getCapacity());
     }
     
     @Test
@@ -198,5 +207,72 @@ public class HashtableTestByPatricio {
         assertEquals(false, table.containsValue("nunca"));
         table.remove(10);
         assertEquals(false, table.containsValue("hola"));
+    }
+    
+    @Test
+    public void testPutAll() {
+        java.util.Hashtable<Integer, String> tableJava = new java.util.Hashtable<>();
+        tableJava.put(10, "hola");
+        tableJava.put(20, "gracias");
+        Hashtable<Integer, String> table = new Hashtable<>();
+        table.putAll(tableJava);
+        assertEquals(tableJava.size(), table.size());
+        assertEquals(tableJava.get(10), table.get(10));
+        
+        tableJava.remove(10);
+        assertNotEquals(tableJava.size(), table.size());
+        assertEquals(null, tableJava.get(10));
+        assertEquals("hola", table.get(10));
+    }
+    
+    @Test
+    public void testClear() {
+        Hashtable<Integer, String> table = new Hashtable<>();
+        table.put(10, "hola");
+        table.put(20, "gracias");
+        assertEquals(2, table.size());
+        table.clear();
+        assertEquals(0, table.size());
+        assertEquals(null, table.get(10));
+    }
+    
+    @Test
+    public void testEquals() {
+        Hashtable<Integer, String> table = new Hashtable<>();
+        java.util.Hashtable<Integer, String> tableJava = new java.util.Hashtable<>();
+        table.put(10, "hola");
+        table.put(20, "gracias");
+        tableJava.put(10, "hola");
+        tableJava.put(20, "gracias");
+        assertEquals(true, table.equals(tableJava));
+        tableJava.remove(10);
+        assertEquals(false, table.equals(tableJava));
+    }
+    
+    @Test
+    public void testHashcode() {
+        Hashtable<Integer, String> table = new Hashtable<>();
+        java.util.Hashtable<Integer, String> tableJava = new java.util.Hashtable<>();
+        assertEquals(tableJava.hashCode(), table.hashCode());
+        table.put(10, "hola");
+        table.put(20, "hola");
+        table.put(30, "hola");
+        assertNotEquals(tableJava.hashCode(), table.hashCode());
+        tableJava.put(10, "hola");
+        tableJava.put(20, "hola");
+        tableJava.put(30, "hola");
+        assertEquals(tableJava.hashCode(), table.hashCode());
+        table.remove(10);
+        table.remove(20);
+        table.remove(30);
+        tableJava.remove(10);
+        tableJava.remove(20);
+        tableJava.remove(30);
+        assertEquals(tableJava.hashCode(), table.hashCode());
+    }
+    
+    @Test
+    public void testClone() {
+        
     }
 }

@@ -69,14 +69,9 @@ class KeyValueNode<K,V> implements Serializable, Map.Entry<K,V> {
     
     @Override
     public int hashCode() {
-        //De acuerdo a java.util.Map.Entry
-        return (this.getKey() == null ? 17 : this.getKey().hashCode()) ^
-//                Comentado ya que sino al cambiar el value de una entry eso
-//                nos cambiaria el hash de la entry y por ende de toda la 
-//                Hashtable, y segun contrato de Hashtable.entrySet() el metodo
-//                setValue() no debe largar ConcurrentModificationException.
-//               (this.getValue() == null ? 131 : this.getValue().hashCode()) ^
-               this.status.getHash();
+        //De acuerdo a estipulado en documentacion de java.util.Map.Entry.hashCode()
+        return (getKey()==null   ? 0 : getKey().hashCode()) ^
+              (getValue()==null ? 0 : getValue().hashCode());
 
     }
 }
