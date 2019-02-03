@@ -71,7 +71,8 @@ public class Hashtable<K,V> extends Dictionary<K,V>
         while(loadFactor <= 0.0f)
             loadFactor += 0.5f;
         this.porcentajeOcupacionMaximo = loadFactor;
-        initialCapacity = getSiguientePrimo(initialCapacity);
+        if( ! esPrimo(initialCapacity))
+            initialCapacity = getSiguientePrimo(initialCapacity);
         nodos = new KeyValueNode[initialCapacity];
         for(int i = 0; i < initialCapacity; i++)
             nodos[i] = new KeyValueNode<>();                
@@ -113,7 +114,9 @@ public class Hashtable<K,V> extends Dictionary<K,V>
 //        5- Si no esta mapeada la key, devolvemos null (contrato de java.util.HashTable).
 
 //      1, 2)
-        checkValidKey(key);
+//        checkValidKey(key);
+        if(key == null)
+            throw new NullPointerException("La key no puede ser null.");
 
 //      3)
         int index = getKeyIndexConCuadratica((K)key, nodos);
@@ -183,6 +186,7 @@ public class Hashtable<K,V> extends Dictionary<K,V>
 //      6- Return value antiguo si se cumplio todo en paso 3. Return null si se continuo con el paso 4, 5 y 6
 
 //      1)
+//      checkValidKey(key);
         if(key == null || value == null)
             throw new NullPointerException("La key o el value es null.");
         
@@ -255,7 +259,7 @@ public class Hashtable<K,V> extends Dictionary<K,V>
 //        hashEstructura = this.hashCode();
     }
 
-    static boolean esPrimo(int num) {        
+    protected static boolean esPrimo(int num) {        
         if(num <= 2 || num % 2 == 0 ) 
             return false;
         
@@ -269,7 +273,11 @@ public class Hashtable<K,V> extends Dictionary<K,V>
         return true;
     }
     
-    static int getSiguientePrimo(int num) {
+    protected static int getSiguientePrimo(int num) {
+        //El numero que viene por parametro podria ser primo. Nos interesa
+        //que nos de el siguiente primo si o si, si el que pasan por parametro
+        //es primo no nos interesa (que el usuario lo pruebe usando esPrimo())
+        num++;
         if(num % 2 == 0)
             num++;
         for(; ; num+=2){
@@ -301,7 +309,8 @@ public class Hashtable<K,V> extends Dictionary<K,V>
 //        5- Si no esta mapeada la key, devolvemos null (contrato de java.util.HashTable).
 
 //      1, 2)
-        checkValidKey(key);
+        if(key == null)
+            throw new NullPointerException("La key no puede ser null.");
 
 //      3)
         int index = getKeyIndexConCuadratica((K)key, nodos);
@@ -333,30 +342,58 @@ public class Hashtable<K,V> extends Dictionary<K,V>
     
     /**
      * Metodo para checkear que la key pasada como Object sea valida.
-     * @param keyParam
+     * @param key
      * @throws NullPointerException si la key es null (no se permite segun contrato de java.util.HashTable)
-     * @throws ClassCastException  si la key no es casteable a generic K
      */
-    private void checkValidKey(Object keyParam)
-            throws NullPointerException, ClassCastException {
-        if(keyParam == null)
-            throw new NullPointerException("La key pasada por parametro no puede ser null.");
-        
-        try {
-            K castedKeyParam = (K) keyParam;
-        } catch(ClassCastException ex) {
-            throw ex;
-        }
-    }
+//    protected synchronized void checkValidKey(Object key)
+//            throws NullPointerException {
+//        if(key == null)
+//            throw new NullPointerException("La key pasada por parametro no puede ser null.");          
+////        
+//        put((K)keyParam, (V)null);
+//        System.out.println("stop");
+//        
+////        TODO ESTO NO FUE EXITOSO, las librerias de Java tampoco lo logran hacer.
+////        Z casted = clazz.cast(keyParam);
+//
+////        Class<K> clazz = keyParam
+////        try {
+////            K castedKeyParam = (K) keyParam;
+////            System.out.println(castedKeyParam);
+////            return castedKeyParam;
+////        } catch(ClassCastException ex) {
+////            throw ex;
+////        }
+//    }
+    
+    /**
+     * Metodo para checkear que el Value pasado como Object sea valido.
+     *
+     * @param valueParam
+     * @throws NullPointerException si el value es null (no se permite segun
+     * contrato de java.util.HashTable)
+     * @throws ClassCastException si el value no es casteable a generic V
+     */
+//    private void checkValidValue(Object valueParam)
+//            throws NullPointerException, ClassCastException {
+//        if(valueParam == null)
+//            throw new NullPointerException("El value pasado por parametro no puede ser null.");
+//        
+//        try {
+//            V castedKeyParam = (V) valueParam;
+//        } catch(ClassCastException ex) {
+//            throw ex;
+//        }
+//    }
 
     /**
-     * @param keyParam
+     * @param key
      * @return true si hay una key en la hashTable que cumpla con equals(). Falso en caso
      * contrario.
      * @throws NullPointerException si keyParam es null (por contrato de java.util.HashTable.containsKey()).
      */
     @Override
-    public synchronized boolean containsKey(Object keyParam) 
+    public synchronized boolean containsKey(Object key) 
             throws NullPointerException {
 //        1- Preguntar si keyParam es null. Puesto que no se permite almacenar null key
 //           (por el contrato de java.util.Hashtable), devolvemos NPE
@@ -372,10 +409,12 @@ public class Hashtable<K,V> extends Dictionary<K,V>
 //           y termina cuando encontramos (CERRADA && nodes[index].key.equals(keyParam)) o ABIERTA.
 
 //      1, 2)
-        checkValidKey(keyParam);
+//        checkValidKey(key);
+        if(key == null)
+            throw new NullPointerException("La key no puede ser null.");
         
 //      3, 4 y 5)
-        if(getKeyIndexConCuadratica((K)keyParam, nodos) == -1)
+        if(getKeyIndexConCuadratica((K)key, nodos) == -1)
             return false;
         return true;
     }
@@ -448,35 +487,16 @@ public class Hashtable<K,V> extends Dictionary<K,V>
 
     @Override
     public synchronized boolean containsValue(Object value) {
-        checkValidValue(value);
+//        checkValidValue(value);
         if(value == null)
             throw new NullPointerException("El value pasado por parametro no puede ser null.");
         
-        checkValidValue(value);
-        return this.values().contains((V) value);
-    }
-    
-    /**
-     * Metodo para checkear que el Value pasado como Object sea valido.
-     * @param valueParam
-     * @throws NullPointerException si el value es null (no se permite segun contrato de java.util.HashTable)
-     * @throws ClassCastException  si el value no es casteable a generic V
-     */
-    private void checkValidValue(Object valueParam)
-            throws NullPointerException, ClassCastException {
-        if(valueParam == null)
-            throw new NullPointerException("El value pasado por parametro no puede ser null.");
-        
         try {
-            V castedKeyParam = (V) valueParam;
-        } catch(ClassCastException ex) {
-            throw ex;
+            return this.values().contains((V) value);
+        } catch(NoSuchElementException ex) {
+            return false;
         }
-    }
-    
-    public synchronized boolean contains(Object value) {
-        return this.containsValue(value);
-    }
+    }    
 
     @Override
     public synchronized void putAll(Map<? extends K,? extends V> m) {
@@ -529,7 +549,7 @@ public class Hashtable<K,V> extends Dictionary<K,V>
         //De acuerdo a contrato de java.util.Map
         int hash = 0;
         int count = 1;
-        for(Map.Entry entry : this.entrySet()) {
+        for(Map.Entry entry : this.nodos) {
             //Hay momentos, como el remove(), que no quitan un nodo de la tabla, sino
             //que simplemente le cambian la bandera de status. De modo que la bandera
             //de status debe ser parte de este hash.
@@ -683,13 +703,13 @@ public class Hashtable<K,V> extends Dictionary<K,V>
         
 //        private ArrayList<P> items;
         private int currentIndex;
-        private Map.Entry<K,V> ultimoObjetoReturned;
+        private KeyValueNode<K,V> ultimoObjetoReturned;
         private int hashAlCrearIterator;
         private boolean nextFueLlamado;
         private final IteratorType type;
         
         IteratorFailFast(int hashEstructura, IteratorType type) {
-            this.currentIndex = 0;
+            this.currentIndex = -1;
             this.hashAlCrearIterator = hashEstructura;
             this.type = type;
              
@@ -699,12 +719,11 @@ public class Hashtable<K,V> extends Dictionary<K,V>
         public boolean hasNext() {
             //DEBE SER FAIL-FAST!!
             this.checkConcurrentModEx();
-                
-            if(nodos.length <= currentIndex)
+
+            if(nodos.length <= (currentIndex+1))
                 return false;
             return true;
         }
-        
         
         private void checkConcurrentModEx() {
             if(hashAlCrearIterator != Hashtable.this.hashCode())
@@ -717,7 +736,17 @@ public class Hashtable<K,V> extends Dictionary<K,V>
             this.checkConcurrentModEx();
             
             try {
-                ultimoObjetoReturned = nodos[currentIndex++];
+                currentIndex++;
+                for(;currentIndex < nodos.length; currentIndex++) {
+                    ultimoObjetoReturned = nodos[currentIndex];
+                    if(ultimoObjetoReturned.getKey() != null && 
+                       ultimoObjetoReturned.status == KeyValueNode.KeyValueFlags.CERRADO)
+                        break;
+                }
+                    
+                if(ultimoObjetoReturned.getKey() == null)
+                    throw new NoSuchElementException("No hay mas elementos en este Enumeration.");
+                
                 P genericAReturnear = null;
                 if(this.type == IteratorType.KEY)
                     genericAReturnear = (P) ultimoObjetoReturned.getKey();
