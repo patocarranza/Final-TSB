@@ -22,9 +22,9 @@ import static org.junit.Assert.*;
  *
  * @author Patricio
  */
-public class HashtableTestByPatricio {
+public class HashtableTests {
     
-    public HashtableTestByPatricio() {
+    public HashtableTests() {
     }
     
     @BeforeClass
