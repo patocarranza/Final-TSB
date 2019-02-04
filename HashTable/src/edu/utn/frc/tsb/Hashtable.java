@@ -200,6 +200,7 @@ public class Hashtable<K,V> extends Dictionary<K,V>
             V valRet = nodos[index].getValue();
 //            nodos[index].key = key;
             nodos[index].setValue(value);
+//            this.ultimoHashcodeCalculado = this.hashCode();
             return valRet;
         }
         
@@ -234,7 +235,6 @@ public class Hashtable<K,V> extends Dictionary<K,V>
     }
     
     protected synchronized void rehash() {
-//        CAMBIA ESTRUCTURA DE HASHTABLE
 //        Un control importante que debe realizarse es el del porcentaje de carga de la tabla (si se usa direccionamiento abierto) 
 //        Se debería monitorear la carga de la tabla, y en caso de llegar al punto de intervención, aumentar el tamaño de la 
 //        tabla (por ejemplo, en un 50% o hasta el número primo siguiente a ese 50%).
@@ -576,13 +576,13 @@ public class Hashtable<K,V> extends Dictionary<K,V>
     }
     
     @Override
-    public Hashtable clone() 
+    public Hashtable<K,V> clone() 
             throws CloneNotSupportedException {
-        //de acuerdo a https://stackoverflow.com/a/5431006/7416707
-        Hashtable<K,V> cloneTable = (Hashtable<K,V>) super.clone();
-        for(Map.Entry<K,V> entry : this.entrySet())
-            cloneTable.put(entry.getKey(), entry.getValue());
-        
+        //de acuerdo a https://stackoverflow.com/a/5431006/7416707 y a documentacion 
+        //de Object.clone() habria que instanciar la referencia cloneTable mediante
+        //super.clone, pero eso directamente es una copia de referencia, no un clon.
+        Hashtable<K,V> cloneTable = (Hashtable<K,V>) new Hashtable<>(this.nodos.length, this.porcentajeOcupacionMaximo);
+        cloneTable.putAll(this);
         return cloneTable;
     }
 

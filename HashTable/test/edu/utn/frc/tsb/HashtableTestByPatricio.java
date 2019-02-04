@@ -6,7 +6,9 @@
 package edu.utn.frc.tsb;
 
 import java.util.Collection;
+import java.util.ConcurrentModificationException;
 import java.util.Enumeration;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import org.junit.After;
@@ -272,7 +274,309 @@ public class HashtableTestByPatricio {
     }
     
     @Test
-    public void testClone() {
+    public void testClone() throws CloneNotSupportedException {
+        Hashtable<Integer, String> table = new Hashtable<>();
+        table.put(10, "hola");
+        table.put(20, "hola");
+        table.put(30, "hola");
+        Hashtable<Integer, String> tableClone = table.clone();
+        assertEquals(tableClone.size(), table.size());
+        assertEquals(tableClone.get(10), table.get(10));
+        assertEquals(tableClone.hashCode(), table.hashCode());
+        assertEquals(true, tableClone.equals(table));
         
+        table.remove(10);
+        assertNotEquals(tableClone.size(), table.size());
+        assertEquals(null, table.get(10));
+        assertEquals("hola", tableClone.get(10));
+        assertNotEquals(tableClone.hashCode(), table.hashCode());
+        assertEquals(false, tableClone.equals(table));
+    }
+    
+    private Hashtable<Integer, String> setUpForCollectionsViewsTests() {
+        Hashtable<Integer, String> table = new Hashtable<>();
+        table.put(10, "hola");
+        table.put(20, "hola");
+        table.put(30, "hola");
+        return table;
+    }
+    
+    @Test
+    public void testKeySet() {
+        Hashtable<Integer, String> table = setUpForCollectionsViewsTests();
+        Set<Integer> keys = table.keySet();
+        assertEquals(table.size(), keys.size());
+        assertEquals(true, keys.contains(10));
+        assertEquals(false, keys.contains(40));
+        
+        //Devuelve el IteratorFailFast
+        for(Integer singleInt : keys) {
+            assertEquals(true, table.containsKey(singleInt));
+        }
+        
+        //Remove() en el keySet debe tambien remover de la tabla
+        keys.remove(10);
+        assertEquals(2, keys.size());
+        assertEquals(false, keys.contains(10));
+        assertEquals(false, table.containsKey(10));
+        assertEquals(2, table.size());
+        
+        //El set esta backed por la hashtable. Un cambio en la hash se ve
+        //reflejado tambien en el set
+        table.put(40, "blanco");
+        table.put(50, "negro");
+        table.put(60, "azul");
+        assertEquals(table.size(), keys.size());
+        assertEquals(true, keys.contains(40));
+        
+        //Aplicar remove() desde el iterador no genera excepciones, y remueve
+        //la key desde el set y la tabla que la backea.
+        Iterator<Integer> iter = keys.iterator();
+        int count = 0;
+        while(iter.hasNext()) {
+            Integer keyInt = iter.next();
+            assertEquals(true, table.containsKey(keyInt));
+            if(count == 1) {
+                iter.remove();
+                assertEquals(keys.contains(keyInt), table.containsKey(keyInt));
+                assertEquals(keys.size(), table.size());
+            }
+            count++;
+        }
+    }
+    
+    @Test (expected = ConcurrentModificationException.class)
+    public void testKeySetCME1() {
+        Hashtable<Integer, String> table = setUpForCollectionsViewsTests();
+        Set<Integer> keys = table.keySet();
+        Iterator<Integer> iter = keys.iterator();
+        int count = 0;
+        while(iter.hasNext()) {
+            Integer keyInt = iter.next();
+            assertEquals(true, table.containsKey(keyInt));
+            if(count == 1) {
+                //No se debe poder modificar la tabla mientras hay un iterador en curso
+                table.put(50, "marron");
+            }
+            count++;
+        }
+    }
+    
+    @Test (expected = ConcurrentModificationException.class)
+    public void testKeySetCME2() {
+        Hashtable<Integer, String> table = setUpForCollectionsViewsTests();
+        Set<Integer> keys = table.keySet();
+        Iterator<Integer> iter = keys.iterator();
+        int count = 0;
+        while(iter.hasNext()) {
+            Integer keyInt = iter.next();
+            assertEquals(true, table.containsKey(keyInt));
+            if(count == 1) {
+                //No se debe poder modificar la tabla mientras hay un iterador en curso
+                table.remove(30);
+            }
+            count++;
+        }
+    }
+    
+    @Test (expected = ConcurrentModificationException.class)
+    public void testKeySetCME3() {
+        Hashtable<Integer, String> table = setUpForCollectionsViewsTests();
+        Set<Integer> keys = table.keySet();
+        Iterator<Integer> iter = keys.iterator();
+        int count = 0;
+        while(iter.hasNext()) {
+            Integer keyInt = iter.next();
+            assertEquals(true, table.containsKey(keyInt));
+            if(count == 1) {
+                //No se debe poder modificar la tabla mientras hay un iterador en curso
+                table.clear();
+            }
+            count++;
+        }
+    }
+    
+    @Test
+    public void testKeySetCME4() {
+        Hashtable<Integer, String> table = setUpForCollectionsViewsTests();
+        Set<Integer> keys = table.keySet();
+        Iterator<Integer> iter = keys.iterator();
+        int count = 0;
+        while(iter.hasNext()) {
+            Integer keyInt = iter.next();
+            assertEquals(true, table.containsKey(keyInt));
+            if(count == 1) {
+                //No cambia la estructura de la tabla, esta reemplazando
+                //un value por otro de una key ya existente.
+                table.put(10, "gracias");
+            }
+            count++;
+        }
+    }
+    
+    @Test
+    public void testValues() {
+        Hashtable<Integer, String> table = setUpForCollectionsViewsTests();
+        Collection<String> values = table.values();
+        assertEquals(table.size(), values.size());
+        assertEquals(true, values.contains("hola"));
+        assertEquals(false, values.contains("negativo"));
+        
+        //Devuelve el IteratorFailFast
+        for(String singleStr : values) {
+            assertEquals(true, table.containsValue(singleStr));
+        }
+        
+        //Remove() en el values debe tambien remover de la tabla
+        values.remove("hola");
+        assertEquals(2, values.size());
+        assertEquals(2, table.size());
+        assertEquals(true, values.contains("hola"));
+        assertEquals(true, table.containsValue("hola"));
+        
+        //La collection esta backed por la hashtable. Un cambio en la hash se ve
+        //reflejado tambien en la collection
+        table.put(40, "blanco");
+        table.put(50, "negro");
+        table.put(60, "azul");
+        assertEquals(table.size(), values.size());
+        assertEquals(true, values.contains("blanco"));
+        
+        //Aplicar remove() desde el iterador no genera excepciones, y remueve
+        //la key desde la collection y la tabla que la backea.
+        Iterator<String> iter = values.iterator();
+        while(iter.hasNext()) {
+            String str = iter.next();
+            assertEquals(true, table.containsValue(str));
+            if(str.equalsIgnoreCase("blanco")) {
+                iter.remove();
+                assertEquals(values.contains(str), table.containsValue(str));
+                assertEquals(values.size(), table.size());
+            }
+        }
+    }
+    
+    @Test
+    public void testEntrySet() {
+        Hashtable<Integer, String> table = setUpForCollectionsViewsTests();
+        Set<Map.Entry<Integer,String>> entries = table.entrySet();
+        assertEquals(table.size(), entries.size());
+        assertEquals(true, entries.contains(new KeyValueNode<>(10, "hola")));
+        assertEquals(false, entries.contains(new KeyValueNode<>(50, "charco")));
+        
+        //Devuelve el IteratorFailFast
+        for(Map.Entry<Integer,String> entry : entries) {
+            assertEquals(true, table.containsKey(entry.getKey()));
+            assertEquals(true, table.containsValue(entry.getValue()));
+        }
+        
+        //Remove() en el values debe tambien remover de la tabla
+        entries.remove(new KeyValueNode<>(10, "hola"));
+        assertEquals(2, entries.size());
+        assertEquals(2, table.size());
+        assertEquals(false, entries.contains(new KeyValueNode<>(10, "hola")));
+        assertEquals(false, table.containsKey(new KeyValueNode<>(10, "hola").getKey()));
+        
+        //La collection esta backed por la hashtable. Un cambio en la hash se ve
+        //reflejado tambien en la collection
+        table.put(40, "blanco");
+        table.put(50, "negro");
+        table.put(60, "azul");
+        assertEquals(table.size(), entries.size());
+        assertEquals(true, entries.contains(new KeyValueNode<>(40, "blanco")));
+        
+        //Aplicar remove() desde el iterador no genera excepciones, y remueve
+        //la key desde la collection y la tabla que la backea.
+        Iterator<Map.Entry<Integer,String>> iter = entries.iterator();
+        while(iter.hasNext()) {
+            Map.Entry<Integer,String> str = iter.next();
+            assertEquals(true, table.containsKey(str.getKey()));
+            if(str.getValue().equalsIgnoreCase("blanco")) {
+                iter.remove();
+                assertEquals(entries.contains(str), table.containsKey(str.getKey()));
+                assertEquals(entries.size(), table.size());
+            }
+        }
+    }
+    
+    @Test
+    public void testKeys() {
+        Hashtable<Integer, String> table = setUpForCollectionsViewsTests();
+        Enumeration<Integer> keys = table.keys();
+        int count = 0;
+        while(keys.hasMoreElements()) {
+            Integer key = keys.nextElement();
+            assertEquals(true, table.containsKey(key));
+            count++;
+        }
+        assertEquals(count, table.size());
+        
+        //Segun contrato de Dictionary y de java.util.Hashtable esto no es failsafe
+        //y la enumeration no esta backed (no es una "view") de la tabla.
+        count = 0;
+        while(keys.hasMoreElements()) {
+            Integer key = keys.nextElement();
+            assertEquals(true, table.containsKey(key));
+            if(count == 1)
+                table.put(100, "nuevo");
+            if(count == 2)
+                table.put(200, "mas nuevo");
+            if(count == 3)
+                table.remove(10);
+            
+            count++;
+        }
+        
+        assertNotEquals(count, table.size());
+    }
+    
+    @Test
+    public void testElements() {
+        Hashtable<Integer, String> table = setUpForCollectionsViewsTests();
+        Enumeration<String> values = table.elements();
+        int count = 0;
+        while(values.hasMoreElements()) {
+            String val = values.nextElement();
+            assertEquals(true, table.containsValue(val));
+            count++;
+        }
+        assertEquals(count, table.size());
+        
+        //Segun contrato de Dictionary y de java.util.Hashtable esto no es failsafe
+        //y la enumeration no esta backed (no es una "view") de la tabla.
+        count = 0;
+        while(values.hasMoreElements()) {
+            String val = values.nextElement();
+            assertEquals(true, table.containsValue(val));
+            if(count == 1)
+                table.put(100, "nuevo");
+            if(count == 2)
+                table.put(200, "mas nuevo");
+            if(count == 3)
+                table.remove(10);
+            
+            count++;
+        }
+        
+        assertNotEquals(count, table.size());
+    }
+    
+    @Test
+    public void testPerformance() {
+        Hashtable<Integer, String> table = new Hashtable<>(12000);
+        long time = 0;
+        for(int i = 0; i < 6000; i++) { 
+            time = System.nanoTime();
+            table.put(i, "string " + i);
+            time = System.nanoTime() - time;
+            System.out.println("Delay put " + i + ": " + time + " nanoSecs");
+        }
+        
+        for(int i = 0; i < 6000; i++) { 
+            time = System.nanoTime();
+            String str = table.get(i);
+            time = System.nanoTime() - time;
+            System.out.println("Delay get " + str + ": " + time + " nanoSecs");
+        }
     }
 }
