@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package edu.utn.frc.tsb;
 
 import java.util.Collection;
@@ -19,8 +14,8 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 /**
- *
- * @author Patricio
+ * FINAL TSB 2019
+ * @author Patricio Ezequiel Carranza, UTN FRC, legajo 60900
  */
 public class HashtableTests {
     

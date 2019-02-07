@@ -14,7 +14,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 
 /**
- * FINAL TSB 2018
+ * FINAL TSB 2019
  * @author Patricio Ezequiel Carranza, UTN FRC, legajo 60900
  */
 public class Hashtable<K,V> extends Dictionary<K,V>
@@ -28,8 +28,6 @@ public class Hashtable<K,V> extends Dictionary<K,V>
     private final float porcentajeOcupacionMaximo;
     private int nodosInsertados;
     private int ultimoHashcodeCalculado;
-    
-//    private volatile transient int hashEstructura;
      
     
     public Hashtable() {
@@ -292,11 +290,7 @@ public class Hashtable<K,V> extends Dictionary<K,V>
         }
     }
     
-    /**
-     * 
-     * @param key
-     * @return  
-    */
+
     @Override
     public synchronized V remove(Object key) {
 //        CAMBIA ESTRUCTURA DE HASHTABLE

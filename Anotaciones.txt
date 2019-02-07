@@ -17,11 +17,6 @@ en las colecciones. Estas colecciones deben ser creadas con Collections.synchron
 https://softwarecave.org/2014/03/19/views-in-java-collections-framework/
 
 
-if(size() <= objetosDevueltos)
-                return false;
-            return true;
-
-
 
 "UTF-8"
 
@@ -36,3 +31,8 @@ consumo payo betty: US$426.25
 TOTAL = $ 73.262 (NO SIGUEN $9980) 
         US$ 811.25 (NO SIGUEN $128.15)
 
+swiss cobranzas 011 5300 7733
+nro transaccion boleta que vence en 12/02/2019: 788084902 
+
+
+"C:\Work\John Demos\Repos\jewel\JewelApp\R\bin\R.exe" --vanilla --slave --file=C://Work//CanReg5//conf//import//r//CR5formatChecks.R --args -paramsFile=C://Users//Patricio//AppData//Local//Temp//rChecksParams.json
