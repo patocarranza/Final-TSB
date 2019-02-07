@@ -1,5 +1,0 @@
-++++FINAL TSB++++++
-http://docs.oracle.com/javase/7/docs/api/java/math/BigInteger.html
-http://en.wikipedia.org/wiki/F%C3%BCrer%27s_algorithm
-http://www.cs.cmu.edu/~pattis/15-1XX/15-200/lectures/reflection/
-http://docs.oracle.com/javase/tutorial/reflect/
